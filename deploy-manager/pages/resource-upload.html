@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资源上传 - DeployManager</title>
+    <style id="theme-vars">
+:root {
+  /* === Brand Colors === */
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+  --color-primary-light: #EFF6FF;
+  --color-primary-text: #1E40AF;
+
+  /* === Neutral Scale === */
+  --color-bg: #F8FAFC;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #F1F5F9;
+  --color-bg-muted: #E2E8F0;
+  --color-border: #CBD5E1;
+  --color-border-light: #E2E8F0;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94A3B8;
+  --color-text-inverse: #FFFFFF;
+
+  /* === State Colors === */
+  --state-success: #16A34A;
+  --state-success-bg: #F0FDF4;
+  --state-warning: #D97706;
+  --state-warning-bg: #FFFBEB;
+  --state-error: #DC2626;
+  --state-error-bg: #FEF2F2;
+  --state-info: #2563EB;
+  --state-info-bg: #EFF6FF;
+
+  /* === Radius === */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* === Typography === */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* === Shadows === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* === Spacing === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+}
+
+/* === Typography Classes === */
+.font-heading { font-family: var(--font-family); font-weight: 600; letter-spacing: -0.01em; }
+.font-body { font-family: var(--font-family); font-weight: 400; }
+.font-mono { font-family: var(--font-mono); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-primary: var(--color-primary);
+    --color-border: var(--color-border);
+  }
+  @layer base {
+    body { background: var(--color-background); color: var(--color-text-primary); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+      .table-row-hover:hover { background: var(--color-bg-sunken); }
+      .table-row-hover { transition: background 150ms ease; }
+      .sub-tab-btn.active { background: var(--color-bg-elevated) !important; color: var(--color-primary) !important; box-shadow: var(--shadow-sm); font-weight: 500; }
+      .sub-tab-btn { cursor: pointer; border: none; }
+      .sub-tab-btn:not(.active):hover { background: var(--color-bg-muted); }
+
+      /* Tree styles */
+      .tree-node { cursor: pointer; user-select: none; display: flex; align-items: center; padding: 5px 8px; border-radius: 4px; transition: background 100ms ease, color 100ms ease; gap: 4px; }
+      .tree-node:hover { background: var(--color-bg-sunken); }
+      .tree-node.selected { background: var(--color-primary-light); color: var(--color-primary); }
+      .tree-node.selected .tree-chevron { color: var(--color-primary); }
+      .tree-node.selected .tree-folder-icon { color: var(--color-primary); }
+      .tree-chevron { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 150ms ease; color: var(--color-text-tertiary); width: 16px; height: 16px; }
+      .tree-chevron.expanded { transform: rotate(90deg); }
+      .tree-chevron.hidden-chevron { visibility: hidden; }
+      .tree-folder-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--color-text-tertiary); width: 16px; height: 16px; }
+      .tree-node.selected .tree-folder-icon { color: var(--color-primary); }
+      .tree-label { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text-primary); }
+      .tree-node.selected .tree-label { color: var(--color-primary); font-weight: 500; }
+      .tree-children { overflow: hidden; }
+      .tree-children.collapsed { display: none; }
+
+      /* Detail modal (same design tokens as Nginx editor modal) */
+      .detail-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .detail-modal-overlay.open {
+        display: flex;
+      }
+      .detail-modal {
+        background: var(--color-bg-elevated);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+        width: 90%;
+        max-width: 560px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .detail-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--color-border-light);
+      }
+      .detail-modal-header h3 {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0;
+      }
+      .detail-modal-close {
+        width: 32px; height: 32px;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-tertiary);
+        transition: background 100ms;
+      }
+      .detail-modal-close:hover {
+        background: var(--color-bg-sunken);
+        color: var(--color-text-primary);
+      }
+      .detail-modal-body {
+        padding: 20px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      .detail-form-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+        gap: 12px;
+      }
+      .detail-form-row:last-child {
+        margin-bottom: 0;
+      }
+      .detail-form-label {
+        flex-shrink: 0;
+        width: 80px;
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        text-align: right;
+      }
+      .detail-form-input {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-elevated);
+        color: var(--color-text-primary);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 150ms;
+      }
+      .detail-form-input:focus {
+        border-color: var(--color-primary);
+      }
+      .detail-form-input[readonly] {
+        background: var(--color-bg-sunken);
+        color: var(--color-text-secondary);
+        cursor: default;
+      }
+      .detail-form-select {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-elevated);
+        color: var(--color-text-primary);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 150ms;
+      }
+      .detail-form-select:focus {
+        border-color: var(--color-primary);
+      }
+      .detail-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 16px 20px;
+        border-top: 1px solid var(--color-border-light);
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="flex min-h-screen" style="background: var(--color-bg);">
+
+      <!-- ========== Left Sidebar (220px, dark) ========== -->
+      <aside class="flex flex-col shrink-0" style="width: 220px; background: #0F172A; color: #CBD5E1;">
+
+        <!-- Brand -->
+        <div class="flex items-center gap-2 px-5 py-5 border-b" style="border-color: rgba(148,163,184,0.15);">
+          <i data-lucide="rocket" style="width:22px;height:22px;color:var(--color-primary);"></i>
+          <span class="font-heading text-base" style="color:#F1F5F9;">DeployManager</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex flex-col gap-1 px-3 pt-6 flex-1">
+          <a href="#" data-dom-id="sidebar-nav-project" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors no-underline" style="color:#94A3B8;"
+             onmouseenter="this.style.background='rgba(148,163,184,0.08)'" onmouseleave="this.style.background='transparent'">
+            <i data-lucide="folder-kanban" style="width:18px;height:18px;"></i>
+            <span>项目管理</span>
+          </a>
+          <a href="#" data-dom-id="sidebar-nav-upload" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium no-underline" style="background:var(--color-primary); color:#FFFFFF; border-radius:var(--radius-md);">
+            <i data-lucide="upload-cloud" style="width:18px;height:18px;"></i>
+            <span>资源上传</span>
+          </a>
+        </nav>
+
+        <!-- Footer -->
+        <div class="px-5 py-4 text-xs flex items-center gap-2" style="border-top:1px solid rgba(148,163,184,0.15); color:#64748B;">
+          <span class="inline-block w-2 h-2 rounded-full" style="background:var(--state-success);"></span>
+          系统正常运行 v2.5.0
+        </div>
+      </aside>
+
+      <!-- ========== Main Area ========== -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Top Header -->
+        <header class="flex items-center justify-between px-8 shrink-0" style="height:56px; background:var(--color-bg-elevated); border-bottom:1px solid var(--color-border-light);">
+          <div class="flex items-center gap-2 text-sm">
+            <i data-lucide="home" style="width:15px;height:15px;color:var(--color-text-tertiary);"></i>
+            <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--color-text-tertiary);"></i>
+            <span style="color:var(--color-text-primary); font-weight:500;">资源上传</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm" style="color:var(--color-text-secondary);">管理员</span>
+            <div class="flex items-center justify-center rounded-full text-xs font-medium" style="width:32px;height:32px;background:var(--color-primary);color:#FFF;">A</div>
+          </div>
+        </header>
+
+        <!-- Content Area (scrollable) -->
+        <div class="flex-1 overflow-y-auto p-8" style="background:var(--color-bg);">
+
+          <!-- Page Title -->
+          <h1 class="font-heading text-2xl mb-1" style="color:var(--color-text-primary);">资源上传</h1>
+          <p class="text-sm mb-8" style="color:var(--color-text-secondary);">管理项目文件和基础组件</p>
+
+          <!-- ============================================ -->
+          <!-- Category 1: 项目文件 (Folder Tree Layout)     -->
+          <!-- ============================================ -->
+          <div class="mb-8">
+            <div class="rounded-lg px-6 py-4 mb-4" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+              <div class="flex items-center gap-3 mb-1">
+                <div class="flex items-center justify-center rounded-md" style="width:36px;height:36px;background:var(--color-primary-light);">
+                  <i data-lucide="folder-open" style="width:18px;height:18px;color:var(--color-primary);"></i>
+                </div>
+                <div>
+                  <h2 class="font-heading text-base" style="color:var(--color-text-primary);">项目文件</h2>
+                  <p class="text-xs" style="color:var(--color-text-tertiary);">上传各项目的JAR包和Vue前端产物</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Two-panel layout: Folder Tree + File List -->
+            <div class="flex gap-4" style="min-height: 520px;">
+
+              <!-- Left Panel: Folder Tree (300px) -->
+              <div class="shrink-0 overflow-hidden" style="width:300px; background:var(--color-bg-elevated); border:1px solid var(--color-border-light); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+                <div class="px-4 py-3 text-xs font-medium flex items-center gap-2" style="background:var(--color-bg-sunken); border-bottom:1px solid var(--color-border-light); color:var(--color-text-secondary);">
+                  <i data-lucide="folder-tree" style="width:14px;height:14px;"></i>
+                  目录结构
+                </div>
+                <div class="py-2 overflow-y-auto no-scrollbar" style="max-height: 470px;">
+
+                  <!-- 电商平台 (expanded) -->
+                  <div class="px-2" style="padding-left: 4px;">
+                    <div class="tree-node" data-node-id="ecom" onclick="toggleTreeNode(this)">
+                      <svg class="tree-chevron expanded" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                      <span class="tree-label">电商平台</span>
+                    </div>
+                    <div class="tree-children" data-parent="ecom" style="padding-left: 12px;">
+                      <!-- JAR 包 — direct leaf node -->
+                      <div class="tree-node selected" data-node-id="ecom-jar" data-folder="ecom/jar" data-type="jar" onclick="selectFolder(this)">
+                        <svg class="tree-chevron hidden-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                        <span class="tree-label">JAR 包</span>
+                        <span class="text-xs ml-auto mr-2" style="color:var(--color-text-tertiary);">2 个文件</span>
+                      </div>
+                      <!-- Vue 产物 — direct leaf node -->
+                      <div class="tree-node" data-node-id="ecom-vue" data-folder="ecom/vue" data-type="vue" onclick="selectFolder(this)">
+                        <svg class="tree-chevron hidden-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                        <span class="tree-label">Vue 产物</span>
+                        <span class="text-xs ml-auto mr-2" style="color:var(--color-text-tertiary);">1 个文件</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 数据中台 (collapsed) -->
+                  <div class="px-2" style="padding-left: 4px;">
+                    <div class="tree-node" data-node-id="datacenter" onclick="toggleTreeNode(this)">
+                      <svg class="tree-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                      <span class="tree-label">数据中台</span>
+                    </div>
+                    <div class="tree-children collapsed" data-parent="datacenter" style="padding-left: 12px;">
+                      <!-- JAR 包 — direct leaf node -->
+                      <div class="tree-node" data-node-id="datacenter-jar" data-folder="datacenter/jar" data-type="jar" onclick="selectFolder(this)">
+                        <svg class="tree-chevron hidden-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                        <span class="tree-label">JAR 包</span>
+                        <span class="text-xs ml-auto mr-2" style="color:var(--color-text-tertiary);">1 个文件</span>
+                      </div>
+                      <!-- Vue 产物 — direct leaf node -->
+                      <div class="tree-node" data-node-id="datacenter-vue" data-folder="datacenter/vue" data-type="vue" onclick="selectFolder(this)">
+                        <svg class="tree-chevron hidden-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                        <span class="tree-label">Vue 产物</span>
+                        <span class="text-xs ml-auto mr-2" style="color:var(--color-text-tertiary);">0 个文件</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 用户系统 (collapsed) -->
+                  <div class="px-2" style="padding-left: 4px;">
+                    <div class="tree-node" data-node-id="usersys" onclick="toggleTreeNode(this)">
+                      <svg class="tree-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                      <span class="tree-label">用户系统</span>
+                    </div>
+                    <div class="tree-children collapsed" data-parent="usersys" style="padding-left: 12px;">
+                      <!-- JAR 包 — direct leaf node -->
+                      <div class="tree-node" data-node-id="usersys-jar" data-folder="usersys/jar" data-type="jar" onclick="selectFolder(this)">
+                        <svg class="tree-chevron hidden-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                        <span class="tree-label">JAR 包</span>
+                        <span class="text-xs ml-auto mr-2" style="color:var(--color-text-tertiary);">0 个文件</span>
+                      </div>
+                      <!-- Vue 产物 — direct leaf node -->
+                      <div class="tree-node" data-node-id="usersys-vue" data-folder="usersys/vue" data-type="vue" onclick="selectFolder(this)">
+                        <svg class="tree-chevron hidden-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg class="tree-folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>
+                        <span class="tree-label">Vue 产物</span>
+                        <span class="text-xs ml-auto mr-2" style="color:var(--color-text-tertiary);">0 个文件</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Right Panel: File List (flexible width) -->
+              <div class="flex-1 overflow-hidden flex flex-col" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+
+                <!-- Right panel: 电商平台 / JAR 包 -->
+                <div id="folder-content-ecom-jar" class="folder-content flex flex-col flex-1">
+
+                  <!-- Breadcrumb header -->
+                  <div class="px-5 py-3 flex items-center gap-2 shrink-0" style="border-bottom:1px solid var(--color-border-light);">
+                    <span class="text-xs font-medium" style="color:var(--color-text-secondary);">电商平台</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--color-text-tertiary);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span class="text-xs font-medium" style="color:var(--color-text-primary);">JAR 包</span>
+                  </div>
+
+                  <div class="flex-1 overflow-y-auto p-5">
+
+                    <!-- Upload Zone -->
+                    <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mb-5" style="border:2px dashed var(--color-border); background:var(--color-bg-elevated); padding:32px 24px; min-height:140px;"
+                         onmouseenter="this.style.borderColor='var(--color-primary)'; this.style.background='var(--color-primary-light)'"
+                         onmouseleave="this.style.borderColor='var(--color-border)'; this.style.background='var(--color-bg-elevated)'">
+                      <div class="mb-2 flex items-center justify-center rounded-full" style="width:40px;height:40px;background:var(--color-primary-light);">
+                        <i data-lucide="cloud-upload" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                      </div>
+                      <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽JAR文件到此处</p>
+                      <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">.jar</p>
+                      <div class="flex items-center gap-3 flex-wrap justify-center">
+                        <input type="text" placeholder="版本标签，如 v2.1.0" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:160px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                        <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                                onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                            上传
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Warning: same-name overwrite -->
+                    <div class="rounded-md px-3 py-2 mb-4 flex items-center gap-2" style="background:var(--state-warning-bg); border:1px solid #FDE68A;">
+                      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--state-warning); flex-shrink:0;"></i>
+                      <span class="text-xs" style="color:var(--state-warning);">同版本标签的文件将覆盖已存在的同名文件，请谨慎上传</span>
+                    </div>
+
+                    <!-- File Table -->
+                    <div class="rounded-lg overflow-hidden" style="border:1px solid var(--color-border-light);">
+                      <table class="w-full text-sm" style="border-collapse:collapse;">
+                        <thead>
+                          <tr style="background:var(--color-bg-sunken);">
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本标签</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                            <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                            <td class="px-5 py-3">
+                              <div class="flex items-center gap-2">
+                                <i data-lucide="file-box" style="width:16px;height:16px;color:var(--state-info);"></i>
+                                <span style="color:var(--color-text-primary);">app-v2.1.0.jar</span>
+                              </div>
+                            </td>
+                            <td class="px-5 py-3">
+                              <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">v2.1.0</span>
+                            </td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">45.2 MB</td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-28</td>
+                            <td class="px-5 py-3 text-right">
+                              <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                      onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                            </td>
+                          </tr>
+                          <tr class="table-row-hover">
+                            <td class="px-5 py-3">
+                              <div class="flex items-center gap-2">
+                                <i data-lucide="file-box" style="width:16px;height:16px;color:var(--state-info);"></i>
+                                <span style="color:var(--color-text-primary);">app-v2.0.0.jar</span>
+                              </div>
+                            </td>
+                            <td class="px-5 py-3">
+                              <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">v2.0.0</span>
+                            </td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">44.8 MB</td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-15</td>
+                            <td class="px-5 py-3 text-right">
+                              <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                      onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Right panel: 电商平台 / Vue 产物 (hidden) -->
+                <div id="folder-content-ecom-vue" class="folder-content hidden flex flex-col flex-1">
+                  <div class="px-5 py-3 flex items-center gap-2 shrink-0" style="border-bottom:1px solid var(--color-border-light);">
+                    <span class="text-xs font-medium" style="color:var(--color-text-secondary);">电商平台</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--color-text-tertiary);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span class="text-xs font-medium" style="color:var(--color-text-primary);">Vue 产物</span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-5">
+                    <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mb-5" style="border:2px dashed var(--color-border); background:var(--color-bg-elevated); padding:32px 24px; min-height:140px;"
+                         onmouseenter="this.style.borderColor='var(--color-primary)'; this.style.background='var(--color-primary-light)'"
+                         onmouseleave="this.style.borderColor='var(--color-border)'; this.style.background='var(--color-bg-elevated)'">
+                      <div class="mb-2 flex items-center justify-center rounded-full" style="width:40px;height:40px;background:var(--color-primary-light);">
+                        <i data-lucide="folder-upload" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                      </div>
+                      <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽Vue dist文件夹</p>
+                      <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">选择文件夹上传</p>
+                      <div class="flex items-center gap-3 flex-wrap justify-center">
+                        <input type="text" placeholder="版本标签，如 v2.1" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:160px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                        <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                                onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                            选择文件夹
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Warning: same-name overwrite -->
+                    <div class="rounded-md px-3 py-2 mb-4 flex items-center gap-2" style="background:var(--state-warning-bg); border:1px solid #FDE68A;">
+                      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--state-warning); flex-shrink:0;"></i>
+                      <span class="text-xs" style="color:var(--state-warning);">同版本标签的文件将覆盖已存在的同名文件，请谨慎上传</span>
+                    </div>
+
+                    <div class="rounded-lg overflow-hidden" style="border:1px solid var(--color-border-light);">
+                      <table class="w-full text-sm" style="border-collapse:collapse;">
+                        <thead>
+                          <tr style="background:var(--color-bg-sunken);">
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本标签</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                            <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr class="table-row-hover">
+                            <td class="px-5 py-3">
+                              <div class="flex items-center gap-2">
+                                <i data-lucide="folder" style="width:16px;height:16px;color:var(--state-warning);"></i>
+                                <span style="color:var(--color-text-primary);">ecom-dist-v2.1</span>
+                              </div>
+                            </td>
+                            <td class="px-5 py-3">
+                              <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">v2.1</span>
+                            </td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">4.2 MB</td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-28</td>
+                            <td class="px-5 py-3 text-right">
+                              <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                      onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right panel: 数据中台 / JAR 包 (hidden) -->
+                <div id="folder-content-datacenter-jar" class="folder-content hidden flex flex-col flex-1">
+                  <div class="px-5 py-3 flex items-center gap-2 shrink-0" style="border-bottom:1px solid var(--color-border-light);">
+                    <span class="text-xs font-medium" style="color:var(--color-text-secondary);">数据中台</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--color-text-tertiary);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span class="text-xs font-medium" style="color:var(--color-text-primary);">JAR 包</span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-5">
+                    <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mb-5" style="border:2px dashed var(--color-border); background:var(--color-bg-elevated); padding:32px 24px; min-height:140px;"
+                         onmouseenter="this.style.borderColor='var(--color-primary)'; this.style.background='var(--color-primary-light)'"
+                         onmouseleave="this.style.borderColor='var(--color-border)'; this.style.background='var(--color-bg-elevated)'">
+                      <div class="mb-2 flex items-center justify-center rounded-full" style="width:40px;height:40px;background:var(--color-primary-light);">
+                        <i data-lucide="cloud-upload" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                      </div>
+                      <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽JAR文件到此处</p>
+                      <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">.jar</p>
+                      <div class="flex items-center gap-3 flex-wrap justify-center">
+                        <input type="text" placeholder="版本标签，如 v2.1.0" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:160px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                        <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                                onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                            上传
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Warning: same-name overwrite -->
+                    <div class="rounded-md px-3 py-2 mb-4 flex items-center gap-2" style="background:var(--state-warning-bg); border:1px solid #FDE68A;">
+                      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--state-warning); flex-shrink:0;"></i>
+                      <span class="text-xs" style="color:var(--state-warning);">同版本标签的文件将覆盖已存在的同名文件，请谨慎上传</span>
+                    </div>
+
+                    <div class="rounded-lg overflow-hidden" style="border:1px solid var(--color-border-light);">
+                      <table class="w-full text-sm" style="border-collapse:collapse;">
+                        <thead>
+                          <tr style="background:var(--color-bg-sunken);">
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本标签</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                            <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                            <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr class="table-row-hover">
+                            <td class="px-5 py-3">
+                              <div class="flex items-center gap-2">
+                                <i data-lucide="file-box" style="width:16px;height:16px;color:var(--state-info);"></i>
+                                <span style="color:var(--color-text-primary);">data-api-v1.0.jar</span>
+                              </div>
+                            </td>
+                            <td class="px-5 py-3">
+                              <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">v1.0</span>
+                            </td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">22.5 MB</td>
+                            <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-05</td>
+                            <td class="px-5 py-3 text-right">
+                              <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                      onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right panel: 数据中台 / Vue 产物 (hidden) -->
+                <div id="folder-content-datacenter-vue" class="folder-content hidden flex flex-col flex-1">
+                  <div class="px-5 py-3 flex items-center gap-2 shrink-0" style="border-bottom:1px solid var(--color-border-light);">
+                    <span class="text-xs font-medium" style="color:var(--color-text-secondary);">数据中台</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--color-text-tertiary);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span class="text-xs font-medium" style="color:var(--color-text-primary);">Vue 产物</span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-5">
+                    <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mb-5" style="border:2px dashed var(--color-border); background:var(--color-bg-elevated); padding:32px 24px; min-height:140px;"
+                         onmouseenter="this.style.borderColor='var(--color-primary)'; this.style.background='var(--color-primary-light)'"
+                         onmouseleave="this.style.borderColor='var(--color-border)'; this.style.background='var(--color-bg-elevated)'">
+                      <div class="mb-2 flex items-center justify-center rounded-full" style="width:40px;height:40px;background:var(--color-primary-light);">
+                        <i data-lucide="folder-upload" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                      </div>
+                      <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽Vue dist文件夹</p>
+                      <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">选择文件夹上传</p>
+                      <div class="flex items-center gap-3 flex-wrap justify-center">
+                        <input type="text" placeholder="版本标签，如 v1.0" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:160px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                        <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                                onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                            选择文件夹
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Warning: same-name overwrite -->
+                    <div class="rounded-md px-3 py-2 mb-4 flex items-center gap-2" style="background:var(--state-warning-bg); border:1px solid #FDE68A;">
+                      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--state-warning); flex-shrink:0;"></i>
+                      <span class="text-xs" style="color:var(--state-warning);">同版本标签的文件将覆盖已存在的同名文件，请谨慎上传</span>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div class="rounded-lg flex flex-col items-center justify-center py-10" style="border:1px solid var(--color-border-light); background:var(--color-bg-sunken);">
+                      <i data-lucide="folder-open" style="width:32px;height:32px;color:var(--color-text-tertiary); margin-bottom:8px;"></i>
+                      <p class="text-sm" style="color:var(--color-text-tertiary);">暂无文件</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right panel: 用户系统 / JAR 包 (hidden) -->
+                <div id="folder-content-usersys-jar" class="folder-content hidden flex flex-col flex-1">
+                  <div class="px-5 py-3 flex items-center gap-2 shrink-0" style="border-bottom:1px solid var(--color-border-light);">
+                    <span class="text-xs font-medium" style="color:var(--color-text-secondary);">用户系统</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--color-text-tertiary);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span class="text-xs font-medium" style="color:var(--color-text-primary);">JAR 包</span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-5">
+                    <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mb-5" style="border:2px dashed var(--color-border); background:var(--color-bg-elevated); padding:32px 24px; min-height:140px;"
+                         onmouseenter="this.style.borderColor='var(--color-primary)'; this.style.background='var(--color-primary-light)'"
+                         onmouseleave="this.style.borderColor='var(--color-border)'; this.style.background='var(--color-bg-elevated)'">
+                      <div class="mb-2 flex items-center justify-center rounded-full" style="width:40px;height:40px;background:var(--color-primary-light);">
+                        <i data-lucide="cloud-upload" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                      </div>
+                      <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽JAR文件到此处</p>
+                      <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">.jar</p>
+                      <div class="flex items-center gap-3 flex-wrap justify-center">
+                        <input type="text" placeholder="版本标签，如 v2.1.0" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:160px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                        <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                                onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                            上传
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Warning: same-name overwrite -->
+                    <div class="rounded-md px-3 py-2 mb-4 flex items-center gap-2" style="background:var(--state-warning-bg); border:1px solid #FDE68A;">
+                      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--state-warning); flex-shrink:0;"></i>
+                      <span class="text-xs" style="color:var(--state-warning);">同版本标签的文件将覆盖已存在的同名文件，请谨慎上传</span>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div class="rounded-lg flex flex-col items-center justify-center py-10" style="border:1px solid var(--color-border-light); background:var(--color-bg-sunken);">
+                      <i data-lucide="folder-open" style="width:32px;height:32px;color:var(--color-text-tertiary); margin-bottom:8px;"></i>
+                      <p class="text-sm" style="color:var(--color-text-tertiary);">暂无文件</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right panel: 用户系统 / Vue 产物 (hidden) -->
+                <div id="folder-content-usersys-vue" class="folder-content hidden flex flex-col flex-1">
+                  <div class="px-5 py-3 flex items-center gap-2 shrink-0" style="border-bottom:1px solid var(--color-border-light);">
+                    <span class="text-xs font-medium" style="color:var(--color-text-secondary);">用户系统</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--color-text-tertiary);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span class="text-xs font-medium" style="color:var(--color-text-primary);">Vue 产物</span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-5">
+                    <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mb-5" style="border:2px dashed var(--color-border); background:var(--color-bg-elevated); padding:32px 24px; min-height:140px;"
+                         onmouseenter="this.style.borderColor='var(--color-primary)'; this.style.background='var(--color-primary-light)'"
+                         onmouseleave="this.style.borderColor='var(--color-border)'; this.style.background='var(--color-bg-elevated)'">
+                      <div class="mb-2 flex items-center justify-center rounded-full" style="width:40px;height:40px;background:var(--color-primary-light);">
+                        <i data-lucide="folder-upload" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                      </div>
+                      <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽Vue dist文件夹</p>
+                      <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">选择文件夹上传</p>
+                      <div class="flex items-center gap-3 flex-wrap justify-center">
+                        <input type="text" placeholder="版本标签，如 v1.0" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:160px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                        <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                                onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                            选择文件夹
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Warning: same-name overwrite -->
+                    <div class="rounded-md px-3 py-2 mb-4 flex items-center gap-2" style="background:var(--state-warning-bg); border:1px solid #FDE68A;">
+                      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--state-warning); flex-shrink:0;"></i>
+                      <span class="text-xs" style="color:var(--state-warning);">同版本标签的文件将覆盖已存在的同名文件，请谨慎上传</span>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div class="rounded-lg flex flex-col items-center justify-center py-10" style="border:1px solid var(--color-border-light); background:var(--color-bg-sunken);">
+                      <i data-lucide="folder-open" style="width:32px;height:32px;color:var(--color-text-tertiary); margin-bottom:8px;"></i>
+                      <p class="text-sm" style="color:var(--color-text-tertiary);">暂无文件</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+          <!-- End Category 1: 项目文件 -->
+
+          <!-- ============================================ -->
+          <!-- Category 2: 基础组件                          -->
+          <!-- ============================================ -->
+          <div class="mb-8">
+            <div class="rounded-lg px-6 py-4 mb-4" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+              <div class="flex items-center gap-3 mb-1">
+                <div class="flex items-center justify-center rounded-md" style="width:36px;height:36px;background:#F0FDF4;">
+                  <i data-lucide="blocks" style="width:18px;height:18px;color:var(--state-success);"></i>
+                </div>
+                <div>
+                  <h2 class="font-heading text-base" style="color:var(--color-text-primary);">基础组件</h2>
+                  <p class="text-xs" style="color:var(--color-text-tertiary);">上传JDK、MySQL便携包、MinIO、Nginx和UnSim引擎等基础组件，支持多版本管理</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sub-tabs: JDK | MySQL | MinIO | Nginx | 引擎 -->
+            <div class="flex items-center gap-1 mb-5 p-1 rounded-lg inline-flex" style="background:var(--color-bg-sunken);">
+              <button class="sub-tab-btn active px-4 py-2 text-sm rounded-md transition-all" onclick="switchSubTab('infra', 'jdk', this)">JDK</button>
+              <button class="sub-tab-btn px-4 py-2 text-sm rounded-md transition-all" style="color:var(--color-text-secondary);" onclick="switchSubTab('infra', 'mysql', this)">MySQL</button>
+              <button class="sub-tab-btn px-4 py-2 text-sm rounded-md transition-all" style="color:var(--color-text-secondary);" onclick="switchSubTab('infra', 'minio', this)">MinIO</button>
+              <button class="sub-tab-btn px-4 py-2 text-sm rounded-md transition-all" style="color:var(--color-text-secondary);" onclick="switchSubTab('infra', 'nginx', this)">Nginx</button>
+              <button class="sub-tab-btn px-4 py-2 text-sm rounded-md transition-all" style="color:var(--color-text-secondary);" onclick="switchSubTab('infra', 'engine', this)">UnSim引擎</button>
+            </div>
+
+            <!-- JDK Tab Content (visible) -->
+            <div id="infra-tab-jdk" class="sub-tab-content" data-category="infra" data-tab="jdk">
+
+              <!-- Version list header with upload button -->
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium" style="color:var(--color-text-primary);">JDK 版本列表</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary); font-weight:500;">4 个版本</span>
+                </div>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                        onclick="toggleUploadZone('jdk')"
+                        onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                  上传新版本
+                </button>
+              </div>
+
+              <!-- JDK Version Table -->
+              <div class="rounded-lg overflow-hidden" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+                <table class="w-full text-sm" style="border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:var(--color-bg-sunken);">
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">标签</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                      <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">JDK 17</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">推荐</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="hard-drive" style="width:16px;height:16px;color:var(--state-success);"></i>
+                          <span style="color:var(--color-text-primary);">jdk-17.0.2-win-x64</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">185 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-20</td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">JDK 11</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">兼容旧项目</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="hard-drive" style="width:16px;height:16px;color:var(--state-success);"></i>
+                          <span style="color:var(--color-text-primary);">jdk-11.0.16-win-x64</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">178 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-10</td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Upload Zone (collapsed by default, toggled by button) -->
+              <div id="jdk-upload-zone" class="mt-4 hidden">
+                <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors" style="border:2px dashed var(--color-primary); background:var(--color-primary-light); padding:32px 24px; min-height:140px;">
+                  <div class="mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:var(--color-primary-light);">
+                    <i data-lucide="folder-up" style="width:24px;height:24px;color:var(--color-primary);"></i>
+                  </div>
+                  <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽JDK目录</p>
+                  <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">需包含 bin/java.exe</p>
+                  <div class="flex items-center gap-3 mb-3 flex-wrap justify-center">
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">版本:</label>
+                      <input type="text" placeholder="17.0.2" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:100px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">标签:</label>
+                      <input type="text" placeholder="如: 推荐版本" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:100px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                          onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                    开始上传
+                  </button>
+                  <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">JDK 仅支持上传纯净版，系统运行时自动配置环境变量</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- MySQL Tab Content (hidden) -->
+            <div id="infra-tab-mysql" class="sub-tab-content hidden" data-category="infra" data-tab="mysql">
+
+              <!-- Version list header with upload button -->
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium" style="color:var(--color-text-primary);">MySQL 版本列表</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary); font-weight:500;">5 个版本</span>
+                </div>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                        onclick="toggleUploadZone('mysql')"
+                        onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                  上传新版本
+                </button>
+              </div>
+
+              <!-- MySQL Version Table -->
+              <div class="rounded-lg overflow-hidden" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+                <table class="w-full text-sm" style="border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:var(--color-bg-sunken);">
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">标签</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">初始化状态</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">所属系统</th>
+                      <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MySQL 8.0.35</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">推荐</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#F0FDF4; color:#16A34A;">
+                            <i data-lucide="box" style="width:10px;height:10px;"></i>纯净版
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="database" style="width:16px;height:16px;color:var(--state-warning);"></i>
+                          <span style="color:var(--color-text-primary);">mysql-8.0.35-portable</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">398 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-15</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-secondary);">通用</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MySQL 8.0.35</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--state-warning-bg); color:var(--state-warning);">含电商初始化数据</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#EFF6FF; color:#2563EB;">
+                            <i data-lucide="settings" style="width:10px;height:10px;"></i>已初始化
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="database" style="width:16px;height:16px;color:var(--state-warning);"></i>
+                          <span style="color:var(--color-text-primary);">mysql-8.0.35-ecom-init</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">402 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-20</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary-text);">电商平台</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MySQL 8.0.35</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--state-warning-bg); color:var(--state-warning);">含数据中台初始化数据</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#EFF6FF; color:#2563EB;">
+                            <i data-lucide="settings" style="width:10px;height:10px;"></i>已初始化
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="database" style="width:16px;height:16px;color:var(--state-warning);"></i>
+                          <span style="color:var(--color-text-primary);">mysql-8.0.35-datahub-init</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">410 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-22</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary-text);">数据中台</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MySQL 5.7.44</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">兼容版</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#F0FDF4; color:#16A34A;">
+                            <i data-lucide="box" style="width:10px;height:10px;"></i>纯净版
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="database" style="width:16px;height:16px;color:var(--state-warning);"></i>
+                          <span style="color:var(--color-text-primary);">mysql-5.7.44-portable</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">356 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-08</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-secondary);">通用</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MySQL 8.4.3</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">最新</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#F0FDF4; color:#16A34A;">
+                            <i data-lucide="box" style="width:10px;height:10px;"></i>纯净版
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="database" style="width:16px;height:16px;color:var(--state-warning);"></i>
+                          <span style="color:var(--color-text-primary);">mysql-8.4.3-portable</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">405 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-07-01</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-secondary);">通用</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Upload Zone (collapsed by default) -->
+              <div id="mysql-upload-zone" class="mt-4 hidden">
+                <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors" style="border:2px dashed var(--color-primary); background:var(--color-primary-light); padding:32px 24px; min-height:140px;">
+                  <div class="mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:var(--color-primary-light);">
+                    <i data-lucide="folder-up" style="width:24px;height:24px;color:var(--color-primary);"></i>
+                  </div>
+                  <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽MySQL便携包</p>
+                  <div class="flex items-center gap-3 mb-3 flex-wrap justify-center">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">版本:</label>
+                        <input type="text" placeholder="8.0.35" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:100px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">标签:</label>
+                        <input type="text" placeholder="如: 含电商初始化数据" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:140px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">初始化状态:</label>
+                        <select class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none;">
+                            <option>纯净版</option>
+                            <option>含初始化数据</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">所属系统:</label>
+                        <select class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none;">
+                            <option>通用</option>
+                            <option>电商平台</option>
+                            <option>OA系统</option>
+                            <option>数据中台</option>
+                            <option>用户系统</option>
+                            <option>审批平台</option>
+                        </select>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                          onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                    开始上传
+                  </button>
+                  <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">纯净版：系统将注入项目配置中的端口和账密 | 含初始化数据：包内预置表结构和初始数据，启动后自动导入</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- MinIO Tab Content (hidden) -->
+            <div id="infra-tab-minio" class="sub-tab-content hidden" data-category="infra" data-tab="minio">
+
+              <!-- Version list header with upload button -->
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium" style="color:var(--color-text-primary);">MinIO 版本列表</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary); font-weight:500;">4 个版本</span>
+                </div>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                        onclick="toggleUploadZone('minio')"
+                        onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                  上传新版本
+                </button>
+              </div>
+
+              <!-- MinIO Version Table -->
+              <div class="rounded-lg overflow-hidden" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+                <table class="w-full text-sm" style="border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:var(--color-bg-sunken);">
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">标签</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">初始化状态</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">所属系统</th>
+                      <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MinIO 2024.06</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">通用版</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#F0FDF4; color:#16A34A;">
+                            <i data-lucide="box" style="width:10px;height:10px;"></i>纯净版
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="hard-drive" style="width:16px;height:16px;color:var(--state-success);"></i>
+                          <span style="color:var(--color-text-primary);">minio-2024.06</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">128 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-20</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-secondary);">通用</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MinIO 2024.06</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--state-warning-bg); color:var(--state-warning);">含电商Bucket策略</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#EFF6FF; color:#2563EB;">
+                            <i data-lucide="settings" style="width:10px;height:10px;"></i>已初始化
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="hard-drive" style="width:16px;height:16px;color:var(--state-success);"></i>
+                          <span style="color:var(--color-text-primary);">minio-2024.06-ecom-init</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">130 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-25</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary-text);">电商平台</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover" style="border-bottom:1px solid var(--color-border-light);">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MinIO 2024.06</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--state-warning-bg); color:var(--state-warning);">含数据中台Bucket策略</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#EFF6FF; color:#2563EB;">
+                            <i data-lucide="settings" style="width:10px;height:10px;"></i>已初始化
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="hard-drive" style="width:16px;height:16px;color:var(--state-success);"></i>
+                          <span style="color:var(--color-text-primary);">minio-2024.06-datahub-init</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">131 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-26</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-primary-light); color:var(--color-primary-text);">数据中台</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                    <tr class="table-row-hover">
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background:var(--state-info-bg); color:var(--state-info);">MinIO 2024.03</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded" style="background:var(--color-bg-sunken); color:var(--color-text-secondary);">旧版</span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background:#F0FDF4; color:#16A34A;">
+                            <i data-lucide="box" style="width:10px;height:10px;"></i>纯净版
+                        </span>
+                      </td>
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-2">
+                          <i data-lucide="hard-drive" style="width:16px;height:16px;color:var(--state-success);"></i>
+                          <span style="color:var(--color-text-primary);">minio-2024.03</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">130 MB</td>
+                      <td class="px-5 py-3" style="color:var(--color-text-secondary);">2026-06-25</td>
+                      <td class="px-5 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-secondary);">通用</span>
+                      </td>
+                      <td class="px-5 py-3 text-right">
+                        <button class="text-xs transition-colors mr-3" style="color:var(--state-info);"
+                                onclick="openDetailModal(this.closest('tr'))"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">详情</button>
+                        <button class="text-xs transition-colors" style="color:var(--state-error);"
+                                onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">删除</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Upload Zone (collapsed by default) -->
+              <div id="minio-upload-zone" class="mt-4 hidden">
+                <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors" style="border:2px dashed var(--color-primary); background:var(--color-primary-light); padding:32px 24px; min-height:140px;">
+                  <div class="mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:var(--color-primary-light);">
+                    <i data-lucide="cloud-upload" style="width:24px;height:24px;color:var(--color-primary);"></i>
+                  </div>
+                  <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽MinIO压缩包</p>
+                  <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">.zip</p>
+                  <div class="flex items-center gap-3 mb-3 flex-wrap justify-center">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">版本:</label>
+                        <input type="text" placeholder="2024.06" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:100px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">标签:</label>
+                        <input type="text" placeholder="如: 含电商Bucket策略" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:140px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">初始化状态:</label>
+                        <select class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none;">
+                            <option>纯净版</option>
+                            <option>含初始化数据</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">所属系统:</label>
+                        <select class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none;">
+                            <option>通用</option>
+                            <option>电商平台</option>
+                            <option>OA系统</option>
+                            <option>数据中台</option>
+                            <option>用户系统</option>
+                            <option>审批平台</option>
+                        </select>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                          onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                    开始上传
+                  </button>
+                  <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">纯净版：系统将注入项目配置中的端口和账密 | 含初始化数据：包内预置Bucket策略和初始数据</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nginx Tab Content (hidden) -->
+            <div id="infra-tab-nginx" class="sub-tab-content hidden" data-category="infra" data-tab="nginx">
+
+              <!-- Version list header with upload button -->
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium" style="color:var(--color-text-primary);">Nginx 版本列表</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-tertiary); font-weight:500;">0 个版本</span>
+                </div>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                        onclick="toggleUploadZone('nginx')"
+                        onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                  上传新版本
+                </button>
+              </div>
+
+              <!-- Nginx Version Table -->
+              <div class="rounded-lg overflow-hidden" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+                <table class="w-full text-sm" style="border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:var(--color-bg-sunken);">
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">标签</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                      <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="6" class="px-5 py-10 text-center text-sm" style="color:var(--color-text-tertiary);">暂无数据，点击右上角"上传新版本"添加</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Upload Zone (collapsed by default) -->
+              <div id="nginx-upload-zone" class="mt-4 hidden">
+                <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors" style="border:2px dashed var(--color-primary); background:var(--color-primary-light); padding:32px 24px; min-height:140px;">
+                  <div class="mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:var(--color-primary-light);">
+                    <i data-lucide="cloud-upload" style="width:24px;height:24px;color:var(--color-primary);"></i>
+                  </div>
+                  <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽Nginx压缩包</p>
+                  <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">.zip</p>
+                  <div class="flex items-center gap-3 mb-3 flex-wrap justify-center">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">版本:</label>
+                        <input type="text" placeholder="1.24" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:100px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">标签:</label>
+                        <input type="text" placeholder="如: 稳定版" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:100px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                          onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                    开始上传
+                  </button>
+                  <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">Nginx 仅支持上传纯净版，端口和路由通过项目配置中的 nginx.conf 统一管理</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- UnSim引擎 Tab Content (hidden) -->
+            <div id="infra-tab-engine" class="sub-tab-content hidden" data-category="infra" data-tab="engine">
+
+              <!-- Version list header with upload button -->
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium" style="color:var(--color-text-primary);">UnSim引擎 版本列表</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--color-bg-muted); color:var(--color-text-tertiary); font-weight:500;">0 个版本</span>
+                </div>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                        onclick="toggleUploadZone('engine')"
+                        onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                  上传新版本
+                </button>
+              </div>
+
+              <!-- UnSim引擎 Version Table -->
+              <div class="rounded-lg overflow-hidden" style="background:var(--color-bg-elevated); border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm);">
+                <table class="w-full text-sm" style="border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:var(--color-bg-sunken);">
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">版本</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">标签</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">文件名</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">大小</th>
+                      <th class="text-left px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">上传时间</th>
+                      <th class="text-right px-5 py-2.5 font-medium" style="color:var(--color-text-secondary); font-size:12px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="6" class="px-5 py-10 text-center text-sm" style="color:var(--color-text-tertiary);">暂无数据，点击右上角"上传新版本"添加</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Upload Zone (collapsed by default) -->
+              <div id="engine-upload-zone" class="mt-4 hidden">
+                <div class="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors" style="border:2px dashed var(--color-primary); background:var(--color-primary-light); padding:32px 24px; min-height:140px;">
+                  <div class="mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:var(--color-primary-light);">
+                    <i data-lucide="folder-up" style="width:24px;height:24px;color:var(--color-primary);"></i>
+                  </div>
+                  <p class="text-sm mb-1" style="color:var(--color-text-primary); font-weight:500;">拖拽UnSim引擎压缩包</p>
+                  <p class="text-xs mb-3" style="color:var(--color-text-tertiary);">.zip 或文件夹</p>
+                  <div class="flex items-center gap-3 mb-3 flex-wrap justify-center">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">版本:</label>
+                        <input type="text" placeholder="v3.2" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:80px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs whitespace-nowrap" style="color:var(--color-text-secondary);">标签:</label>
+                        <input type="text" placeholder="电商平台专用引擎" class="text-xs px-2.5 py-1.5 rounded-md" style="border:1px solid var(--color-border); background:var(--color-bg-elevated); color:var(--color-text-primary); outline:none; width:140px;" onfocus="this.style.borderColor='var(--color-primary)'" onblur="this.style.borderColor='var(--color-border)'">
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm rounded-md transition-colors" style="background:var(--color-primary); color:#FFF;"
+                          onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+                    开始上传
+                  </button>
+                  <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">UnSim引擎 仅支持上传纯净版，运行时由启动脚本自动注入配置</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- End Category 2: 基础组件 -->
+
+        </div>
+      </div>
+
+      <!-- Scripts -->
+      <script>
+      // === Folder Tree: Toggle expand/collapse ===
+      function toggleTreeNode(node) {
+        var nodeId = node.getAttribute('data-node-id');
+        var children = document.querySelector('.tree-children[data-parent="' + nodeId + '"]');
+        var chevron = node.querySelector('.tree-chevron');
+
+        if (children && chevron && !chevron.classList.contains('hidden-chevron')) {
+          if (children.classList.contains('collapsed')) {
+            children.classList.remove('collapsed');
+            chevron.classList.add('expanded');
+          } else {
+            children.classList.add('collapsed');
+            chevron.classList.remove('expanded');
+          }
+        }
+      }
+
+      // === Folder Tree: Select a leaf folder ===
+      function selectFolder(node) {
+        // Remove previous selection
+        var prev = document.querySelector('.tree-node.selected');
+        if (prev) prev.classList.remove('selected');
+
+        // Select new
+        node.classList.add('selected');
+
+        // Hide all folder content panels
+        var allPanels = document.querySelectorAll('.folder-content');
+        allPanels.forEach(function(p) { p.classList.add('hidden'); });
+
+        // Show the matching content panel by node-id
+        var nodeId = node.getAttribute('data-node-id');
+        var panel = document.getElementById('folder-content-' + nodeId);
+        if (panel) {
+          panel.classList.remove('hidden');
+        }
+      }
+
+      // === Sub-tab switching for 基础组件 ===
+      function switchSubTab(category, tab, btn) {
+        var parent = btn.parentElement;
+        var buttons = parent.querySelectorAll('.sub-tab-btn');
+        buttons.forEach(function(b) {
+          b.classList.remove('active');
+          b.style.color = 'var(--color-text-secondary)';
+        });
+        btn.classList.add('active');
+        btn.style.color = '';
+
+        var allContents = document.querySelectorAll('.sub-tab-content[data-category="' + category + '"]');
+        allContents.forEach(function(c) {
+          c.classList.add('hidden');
+        });
+        var target = document.getElementById(category + '-tab-' + tab);
+        if (target) {
+          target.classList.remove('hidden');
+        }
+      }
+
+      // === Toggle upload zone for 基础组件 ===
+      function toggleUploadZone(component) {
+        var zone = document.getElementById(component + '-upload-zone');
+        if (zone) {
+          zone.classList.toggle('hidden');
+        }
+      }
+      </script>
+    </main>
+    <script>lucide.createIcons();</script>
+
+    <!-- ========== Detail Modal ========== -->
+    <div id="detail-modal" class="detail-modal-overlay" onclick="if(event.target===this)closeDetailModal()">
+      <div class="detail-modal">
+        <div class="detail-modal-header">
+          <h3>组件详情</h3>
+          <button class="detail-modal-close" onclick="closeDetailModal()">
+            <i data-lucide="x" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
+        <div class="detail-modal-body">
+          <div class="detail-form-row">
+            <label class="detail-form-label">版本</label>
+            <input type="text" id="detail-version" class="detail-form-input" />
+          </div>
+          <div class="detail-form-row">
+            <label class="detail-form-label">标签</label>
+            <input type="text" id="detail-label" class="detail-form-input" />
+          </div>
+          <div class="detail-form-row">
+            <label class="detail-form-label">初始化状态</label>
+            <select id="detail-init-state" class="detail-form-select">
+              <option value="纯净版">纯净版</option>
+              <option value="含初始化数据">含初始化数据</option>
+            </select>
+          </div>
+          <div class="detail-form-row">
+            <label class="detail-form-label">所属系统</label>
+            <select id="detail-system" class="detail-form-select">
+              <option value="通用">通用</option>
+              <option value="电商平台">电商平台</option>
+              <option value="OA系统">OA系统</option>
+              <option value="数据中台">数据中台</option>
+              <option value="用户系统">用户系统</option>
+              <option value="审批平台">审批平台</option>
+            </select>
+          </div>
+          <div class="detail-form-row">
+            <label class="detail-form-label">文件名</label>
+            <input type="text" id="detail-filename" class="detail-form-input" readonly />
+          </div>
+          <div class="detail-form-row">
+            <label class="detail-form-label">大小</label>
+            <input type="text" id="detail-size" class="detail-form-input" readonly />
+          </div>
+          <div class="detail-form-row">
+            <label class="detail-form-label">上传时间</label>
+            <input type="text" id="detail-upload-time" class="detail-form-input" readonly />
+          </div>
+        </div>
+        <div class="detail-modal-footer">
+          <button class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer border-0 transition-colors" style="background:var(--color-bg-sunken); border:1px solid var(--color-border); color:var(--color-text-primary);"
+                  onclick="closeDetailModal()"
+                  onmouseenter="this.style.borderColor='var(--color-primary)'" onmouseleave="this.style.borderColor='var(--color-border)'">
+            取消
+          </button>
+          <button class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer border-0 transition-colors" style="background:var(--color-primary); color:var(--color-text-inverse);"
+                  onclick="closeDetailModal()"
+                  onmouseenter="this.style.background='var(--color-primary-hover)'" onmouseleave="this.style.background='var(--color-primary)'">
+            <i data-lucide="save" style="width:14px;height:14px;"></i>
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    function openDetailModal(row) {
+      var cells = row.querySelectorAll('td');
+      // Determine table structure by column count
+      // JDK/Engine: 版本(0), 标签(1), 文件名(2), 大小(3), 上传时间(4), 所属系统(5)
+      // MySQL/MinIO/Nginx: 版本(0), 标签(1), 配置状态(2), 文件名(3), 大小(4), 上传时间(5), 所属系统(6)
+      var hasConfigState = (cells.length >= 8);
+      var versionIdx   = 0;
+      var labelIdx     = 1;
+      var filenameIdx  = hasConfigState ? 3 : 2;
+      var sizeIdx      = hasConfigState ? 4 : 3;
+      var timeIdx      = hasConfigState ? 5 : 4;
+      var systemIdx    = hasConfigState ? 6 : 5;
+
+      // Extract text content (strip HTML tags)
+      function getText(td) { return td ? td.textContent.trim() : ''; }
+
+      var version   = getText(cells[versionIdx]);
+      var label     = getText(cells[labelIdx]);
+      var filename  = getText(cells[filenameIdx]);
+      var size      = getText(cells[sizeIdx]);
+      var uploadTime = getText(cells[timeIdx]);
+      var system    = getText(cells[systemIdx]);
+
+      // Determine init state from config state column (if present)
+      var initState = '纯净版';
+      if (hasConfigState) {
+        var configText = getText(cells[2]);
+        if (configText.indexOf('已初始化') !== -1 || configText.indexOf('已配置') !== -1) {
+          initState = '含初始化数据';
+        }
+      }
+
+      document.getElementById('detail-version').value = version;
+      document.getElementById('detail-label').value = label;
+      document.getElementById('detail-init-state').value = initState;
+      document.getElementById('detail-system').value = system;
+      document.getElementById('detail-filename').value = filename;
+      document.getElementById('detail-size').value = size;
+      document.getElementById('detail-upload-time').value = uploadTime;
+
+      document.getElementById('detail-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      lucide.createIcons();
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    </script>
+</body></html>

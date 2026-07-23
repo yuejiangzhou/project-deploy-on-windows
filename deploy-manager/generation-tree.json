@@ -1,0 +1,58 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell-v2",
+    "kind": "project-shell",
+    "pageIds": ["page-project-list", "page-version-manage", "page-resource-upload", "page-package-center"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": ["left-sidebar", "top-header", "content-wrapper"],
+    "privateRegions": [],
+    "mutableSlots": ["activeNavItem", "pageTitle", "mainContent"],
+    "status": "planned",
+    "children": [
+      {
+        "nodeId": "gen-page-project-list",
+        "kind": "page-leaf",
+        "pageIds": ["page-project-list"],
+        "output": "pages/project-list.html",
+        "sharedRegions": [],
+        "privateRegions": ["stats cards", "project table", "search/filter"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-version-manage",
+        "kind": "page-leaf",
+        "pageIds": ["page-version-manage"],
+        "output": "pages/version-manage.html",
+        "sharedRegions": [],
+        "privateRegions": ["version table", "version detail accordion"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-resource-upload",
+        "kind": "page-leaf",
+        "pageIds": ["page-resource-upload"],
+        "output": "pages/resource-upload.html",
+        "sharedRegions": [],
+        "privateRegions": ["6-tab upload area", "resource tables"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-package-center",
+        "kind": "page-leaf",
+        "pageIds": ["page-package-center"],
+        "output": "pages/package-center.html",
+        "sharedRegions": [],
+        "privateRegions": ["package config", "encryption settings", "progress", "output list"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "mainContent"],
+        "status": "planned",
+        "children": []
+      }
+    ]
+  }
+}

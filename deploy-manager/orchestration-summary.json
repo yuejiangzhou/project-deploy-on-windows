@@ -1,0 +1,106 @@
+{
+  "project": {
+    "name": "多产品部署管理系统",
+    "path": "C:\\Users\\x\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a4371b504ee7c80833d7720\\deploy-manager",
+    "operation": "edit",
+    "deviceType": "desktop",
+    "language": "zh-CN",
+    "styleDefinitionBrief": "DevOps admin console, cool neutral + blue accent, Inter sans-serif, tight functional layout, restrained surfaces, 3-item sidebar nav",
+    "designRead": "Admin console / DevOps engineer / calm neutral utility / high density / avoid flashy decoration",
+    "designDials": { "layoutVariance": 1, "motionIntensity": 1, "visualDensity": 4 },
+    "sharedProjectShellContract": {
+      "navigationShell": "left sidebar with 3 nav items (项目管理/资源上传/打包中心) + top header bar with breadcrumb and user actions",
+      "primaryColorSystem": "blue-500 (#3B82F6) as primary CTA and selected states",
+      "typographySystem": "Inter sans-serif, 14px body, 600 weight headings",
+      "radiusScale": "sm: 4px, md: 8px, lg: 12px, max 12px",
+      "surfaceDepthModel": "border-based surfaces; shadow only on floating layers",
+      "ctaStyle": "solid blue primary button, ghost secondary, compact height (32-36px)"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell-v2",
+        "kind": "project-shell",
+        "pageIds": ["page-project-list", "page-version-manage", "page-resource-upload", "page-package-center"],
+        "output": "partials/project-shell.html",
+        "status": "planned",
+        "children": [
+          { "nodeId": "gen-page-project-list", "kind": "page-leaf", "pageIds": ["page-project-list"], "output": "pages/project-list.html", "status": "planned", "children": [] },
+          { "nodeId": "gen-page-version-manage", "kind": "page-leaf", "pageIds": ["page-version-manage"], "output": "pages/version-manage.html", "status": "planned", "children": [] },
+          { "nodeId": "gen-page-resource-upload", "kind": "page-leaf", "pageIds": ["page-resource-upload"], "output": "pages/resource-upload.html", "status": "planned", "children": [] },
+          { "nodeId": "gen-page-package-center", "kind": "page-leaf", "pageIds": ["page-package-center"], "output": "pages/package-center.html", "status": "planned", "children": [] }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "libraryIdentity": null,
+    "cssFilePath": "C:\\Users\\x\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a4371b504ee7c80833d7720\\deploy-manager\\colors_and_type.css",
+    "brandPrefix": "dm",
+    "themeMode": "light",
+    "designDecisionSummary": "Blue primary, neutral gray backgrounds, tight functional spacing, admin console pattern, 3-item sidebar"
+  },
+  "pages": [
+    {
+      "nodeId": "page-project-list",
+      "slug": "project-list",
+      "title": "项目管理",
+      "htmlSrc": "pages/project-list.html",
+      "pageIndex": 1,
+      "pageType": "information-dense",
+      "businessScenario": "View all projects with version counts and status, navigate into version management",
+      "visualNorthStar": "Clean table with folder icons, status badges, stats cards at top"
+    },
+    {
+      "nodeId": "page-version-manage",
+      "slug": "version-manage",
+      "title": "版本管理",
+      "htmlSrc": "pages/version-manage.html",
+      "pageIndex": 2,
+      "pageType": "task-driven",
+      "businessScenario": "Manage versions for a project, configure components (frontend/JAR/MySQL/MinIO/engine/JDK) per version",
+      "visualNorthStar": "Version table with expandable accordion detail panels, toggle switches for optional components"
+    },
+    {
+      "nodeId": "page-resource-upload",
+      "slug": "resource-upload",
+      "title": "资源上传",
+      "htmlSrc": "pages/resource-upload.html",
+      "pageIndex": 3,
+      "pageType": "task-driven",
+      "businessScenario": "Upload 6 types of resources: JAR, Vue dist, JDK, MySQL, MinIO, Engine",
+      "visualNorthStar": "6-tab upload page with drag-drop zones and resource tables with reference counts"
+    },
+    {
+      "nodeId": "page-package-center",
+      "slug": "package-center",
+      "title": "打包中心",
+      "htmlSrc": "pages/package-center.html",
+      "pageIndex": 4,
+      "pageType": "task-driven",
+      "businessScenario": "Select project/version, configure ZIP encryption password, package and download encrypted ZIP",
+      "visualNorthStar": "Package config form with encryption settings, progress bar, terminal log, output file list"
+    }
+  ],
+  "wiringPlan": [
+    { "sourceNodeId": "page-project-list", "domId": "sidebar-nav-upload", "targetPageId": "page-resource-upload" },
+    { "sourceNodeId": "page-project-list", "domId": "sidebar-nav-package", "targetPageId": "page-package-center" },
+    { "sourceNodeId": "page-version-manage", "domId": "breadcrumb-back", "targetPageId": "page-project-list" },
+    { "sourceNodeId": "page-version-manage", "domId": "sidebar-nav-project", "targetPageId": "page-project-list" },
+    { "sourceNodeId": "page-version-manage", "domId": "sidebar-nav-upload", "targetPageId": "page-resource-upload" },
+    { "sourceNodeId": "page-version-manage", "domId": "sidebar-nav-package", "targetPageId": "page-package-center" },
+    { "sourceNodeId": "page-resource-upload", "domId": "sidebar-nav-project", "targetPageId": "page-project-list" },
+    { "sourceNodeId": "page-resource-upload", "domId": "sidebar-nav-package", "targetPageId": "page-package-center" },
+    { "sourceNodeId": "page-package-center", "domId": "sidebar-nav-project", "targetPageId": "page-project-list" },
+    { "sourceNodeId": "page-package-center", "domId": "sidebar-nav-upload", "targetPageId": "page-resource-upload" }
+  ],
+  "hiddenInteractionPlan": [
+    { "sourceNodeId": "page-version-manage", "domId": "sidebar-nav-project", "targetPageId": "page-project-list", "hideEdge": true, "reason": "global sidebar nav" },
+    { "sourceNodeId": "page-version-manage", "domId": "sidebar-nav-upload", "targetPageId": "page-resource-upload", "hideEdge": true, "reason": "global sidebar nav" },
+    { "sourceNodeId": "page-version-manage", "domId": "sidebar-nav-package", "targetPageId": "page-package-center", "hideEdge": true, "reason": "global sidebar nav" },
+    { "sourceNodeId": "page-resource-upload", "domId": "sidebar-nav-project", "targetPageId": "page-project-list", "hideEdge": true, "reason": "global sidebar nav" },
+    { "sourceNodeId": "page-resource-upload", "domId": "sidebar-nav-package", "targetPageId": "page-package-center", "hideEdge": true, "reason": "global sidebar nav" },
+    { "sourceNodeId": "page-package-center", "domId": "sidebar-nav-project", "targetPageId": "page-project-list", "hideEdge": true, "reason": "global sidebar nav" },
+    { "sourceNodeId": "page-package-center", "domId": "sidebar-nav-upload", "targetPageId": "page-resource-upload", "hideEdge": true, "reason": "global sidebar nav" }
+  ]
+}

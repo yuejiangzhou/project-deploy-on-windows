@@ -1,0 +1,41 @@
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# ===== IDE =====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# ===== 日志 =====
+logs/
+deploy-manager-backend/logs/
+
+# ===== 后端临时文件 =====
+deploy-manager-backend/temp/
+
+# ===== 前端 =====
+deploy-manager-web/node_modules/
+deploy-manager-web/dist/
+deploy-manager-web/.vite/
+deploy-manager-web/npm-debug.log*
+deploy-manager-web/yarn-error.log*
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+
+# ===== Docker 数据卷 =====
+mysql-data/
+minio-data/

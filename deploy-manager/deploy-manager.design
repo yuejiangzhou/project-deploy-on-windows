@@ -1,0 +1,138 @@
+{
+  "data": [
+    {
+      "id": "page-project-list",
+      "type": "page",
+      "title": "项目管理",
+      "version": 3,
+      "createdAt": 1782819843000,
+      "canvasData": {
+        "x": 820,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/project-list.html",
+        "interactions": [
+          {
+            "domId": "btn-project-config",
+            "targetPageId": "page-project-config"
+          },
+          {
+            "domId": "sidebar-nav-upload",
+            "targetPageId": "page-resource-upload"
+          },
+          {
+            "domId": "btn-project-package",
+            "targetPageId": "page-package-center"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-project-config",
+      "type": "page",
+      "title": "项目配置",
+      "version": 3,
+      "createdAt": 1782819843000,
+      "canvasData": {
+        "x": 200,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/project-config.html",
+        "interactions": [
+          {
+            "domId": "sidebar-nav-project",
+            "targetPageId": "page-project-list",
+            "hideEdge": true
+          },
+          {
+            "domId": "sidebar-nav-upload",
+            "targetPageId": "page-resource-upload",
+            "hideEdge": true
+          },
+          {
+            "domId": "breadcrumb-back",
+            "targetPageId": "page-project-list"
+          },
+          {
+            "domId": "goto-package-center",
+            "targetPageId": "page-package-center"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-resource-upload",
+      "type": "page",
+      "title": "资源上传",
+      "version": 3,
+      "createdAt": 1782819843000,
+      "canvasData": {
+        "x": 204,
+        "y": 828,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/resource-upload.html",
+        "interactions": [
+          {
+            "domId": "sidebar-nav-project",
+            "targetPageId": "page-project-list",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-package-center",
+      "type": "page",
+      "title": "打包中心",
+      "version": 3,
+      "createdAt": 1782819843000,
+      "canvasData": {
+        "x": 204,
+        "y": 1344,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/package-center.html",
+        "interactions": [
+          {
+            "domId": "sidebar-nav-project",
+            "targetPageId": "page-project-list",
+            "hideEdge": true
+          },
+          {
+            "domId": "sidebar-nav-upload",
+            "targetPageId": "page-resource-upload",
+            "hideEdge": true
+          },
+          {
+            "domId": "back-to-project-config",
+            "targetPageId": "page-project-config"
+          },
+          {
+            "domId": "breadcrumb-project-list",
+            "targetPageId": "page-project-list"
+          },
+          {
+            "domId": "breadcrumb-project-config",
+            "targetPageId": "page-project-config"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop",
+    "projectName": "多产品部署管理系统",
+    "windowSize": {
+      "width": 800,
+      "height": 600
+    }
+  }
+}
