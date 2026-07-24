@@ -166,21 +166,30 @@ CREATE TABLE `operation_log` (
 -- 7. License 记录表
 -- ----------------------------------------
 CREATE TABLE `license_record` (
-  `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `project_id`    BIGINT       DEFAULT NULL              COMMENT '所属项目ID',
-  `customer_name` VARCHAR(200) DEFAULT NULL              COMMENT '客户名称',
-  `license_file`  VARCHAR(500) DEFAULT NULL              COMMENT 'License文件路径',
-  `expire_date`   DATETIME     DEFAULT NULL              COMMENT '到期日期',
-  `trial_days`    INT          DEFAULT NULL              COMMENT '试用天数',
-  `type`          VARCHAR(20)  NOT NULL DEFAULT 'TRIAL'  COMMENT '类型: TRIAL/OFFICIAL/RENEWAL',
-  `status`        VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/EXPIRED/REVOKED',
-  `parent_id`     BIGINT       DEFAULT NULL              COMMENT '父License ID（续期场景）',
-  `generated_by`  BIGINT       DEFAULT NULL              COMMENT '生成人用户ID',
-  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `id`                       BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `project_id`               BIGINT       DEFAULT NULL              COMMENT '所属项目ID',
+  `license_id`               VARCHAR(50)  DEFAULT NULL              COMMENT 'License编号(UUID)',
+  `type`                     VARCHAR(20)  NOT NULL DEFAULT 'TRIAL'  COMMENT '类型: TRIAL/OFFICIAL/RENEWAL',
+  `customer_name`            VARCHAR(200) DEFAULT NULL              COMMENT '客户名称',
+  `issue_date`               DATE         DEFAULT NULL              COMMENT '签发日期',
+  `expire_date`              DATE         DEFAULT NULL              COMMENT '到期日期',
+  `trial_days`               INT          DEFAULT NULL              COMMENT '试用天数',
+  `data_json`                TEXT         DEFAULT NULL              COMMENT 'License数据JSON',
+  `signature`                TEXT         DEFAULT NULL              COMMENT 'RSA签名(Base64)',
+  `minio_bucket`             VARCHAR(100) DEFAULT NULL              COMMENT 'MinIO存储桶',
+  `minio_lic_object_key`     VARCHAR(500) DEFAULT NULL              COMMENT 'MinIO .lic文件对象键',
+  `minio_timestamp_object_key` VARCHAR(500) DEFAULT NULL            COMMENT 'MinIO timestamp.dat对象键',
+  `parent_id`                BIGINT       DEFAULT NULL              COMMENT '父License ID（续期场景）',
+  `generated_by`             BIGINT       DEFAULT NULL              COMMENT '生成人用户ID',
+  `status`                   VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/EXPIRED/REVOKED/RENEWED',
+  `status_note`              VARCHAR(500) DEFAULT NULL              COMMENT '状态备注',
+  `deleted`                  TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '逻辑删除: 0否 1是',
+  `created_at`               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at`               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_project` (`project_id`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  KEY `idx_license_id` (`license_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='License记录表';
 
 -- ----------------------------------------
