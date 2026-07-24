@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/infra")
+@RequestMapping("/api/infrastructures")
 @RequiredArgsConstructor
 @Slf4j
 public class InfrastructureController {

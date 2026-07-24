@@ -1,6 +1,7 @@
 package com.company.deploy.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.company.deploy.config.MinioConfig;
 import com.company.deploy.dto.PackageProgressDTO;
 import com.company.deploy.common.PageResult;
@@ -333,12 +334,10 @@ public class PackageService {
         }
         wrapper.orderByDesc(PackageRecord::getCreatedAt);
 
-        long total = packageRecordMapper.selectCount(wrapper);
-        int offset = (pageNum - 1) * pageSize;
-        wrapper.last("LIMIT " + offset + ", " + pageSize);
-        List<PackageRecord> records = packageRecordMapper.selectList(wrapper);
+        Page<PackageRecord> page = Page.of(pageNum, pageSize);
+        page = packageRecordMapper.selectPage(page, wrapper);
 
-        return PageResult.of(records, total, pageNum, pageSize);
+        return PageResult.of(page.getRecords(), page.getTotal(), pageNum, pageSize);
     }
 
     public PackageRecord getLatestSuccessPackage(Long projectId) {
@@ -346,9 +345,12 @@ public class PackageService {
         wrapper.eq(PackageRecord::getProjectId, projectId)
                 .eq(PackageRecord::getStatus, "SUCCESS")
                 .eq(PackageRecord::getDeleted, false)
-                .orderByDesc(PackageRecord::getCreatedAt)
-                .last("LIMIT 1");
-        return packageRecordMapper.selectOne(wrapper);
+                .orderByDesc(PackageRecord::getCreatedAt);
+        // 使用 Page 分页取第一条，避免 .last("LIMIT 1")
+        Page<PackageRecord> page = Page.of(1, 1);
+        page = packageRecordMapper.selectPage(page, wrapper);
+        List<PackageRecord> records = page.getRecords();
+        return records.isEmpty() ? null : records.get(0);
     }
 
     public InputStream downloadPackage(Long id) throws Exception {

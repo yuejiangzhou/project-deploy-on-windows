@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function getInfraList(type) {
   return request({
-    url: `/infra/${type}/list`,
+    url: `/infrastructures/${type}/list`,
     method: 'get'
   })
 }
@@ -15,7 +15,7 @@ export function uploadInfraFile(type, file, params) {
   if (params?.initState) formData.append('initState', params.initState)
   if (params?.belongsTo) formData.append('belongsTo', params.belongsTo)
   return request({
-    url: `/infra/${type}/upload`,
+    url: `/infrastructures/${type}/upload`,
     method: 'post',
     data: formData,
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -31,7 +31,7 @@ export function uploadInfraFolder(type, files, folderName, params) {
   if (params?.initState) formData.append('initState', params.initState)
   if (params?.belongsTo) formData.append('belongsTo', params.belongsTo)
   return request({
-    url: `/infra/${type}/upload-folder`,
+    url: `/infrastructures/${type}/upload-folder`,
     method: 'post',
     data: formData,
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -46,7 +46,7 @@ export function uploadInfraZip(type, zipFile, params) {
   if (params?.initState) formData.append('initState', params.initState)
   if (params?.belongsTo) formData.append('belongsTo', params.belongsTo)
   return request({
-    url: `/infra/${type}/upload-zip`,
+    url: `/infrastructures/${type}/upload-zip`,
     method: 'post',
     data: formData,
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -55,14 +55,14 @@ export function uploadInfraZip(type, zipFile, params) {
 
 export function deleteInfraFile(type, id) {
   return request({
-    url: `/infra/${type}/${id}`,
+    url: `/infrastructures/${type}/${id}`,
     method: 'delete'
   })
 }
 
 export function editInfraFile(type, id, data) {
   return request({
-    url: `/infra/${type}/${id}`,
+    url: `/infrastructures/${type}/${id}`,
     method: 'put',
     data
   })
@@ -70,7 +70,7 @@ export function editInfraFile(type, id, data) {
 
 export function getLatestInfra(type) {
   return request({
-    url: `/infra/${type}/latest`,
+    url: `/infrastructures/${type}/latest`,
     method: 'get'
   })
 }

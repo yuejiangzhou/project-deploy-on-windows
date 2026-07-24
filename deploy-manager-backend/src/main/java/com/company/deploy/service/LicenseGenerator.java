@@ -2,6 +2,7 @@ package com.company.deploy.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
@@ -20,8 +21,13 @@ public class LicenseGenerator {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // RSA-2048 test key pair (for development only, replace with production keys later)
-    private static final String PRIVATE_KEY =
+    // License 密钥从环境变量注入，开发环境保留默认测试密钥
+    // 生产环境必须通过环境变量覆盖: LICENSE_RSA_PRIVATE_KEY / LICENSE_RSA_PUBLIC_KEY / LICENSE_AES_KEY
+    private final String privateKey;
+    private final String publicKey;
+    private final String aesKey;
+
+    private static final String DEV_PRIVATE_KEY =
             "-----BEGIN PRIVATE KEY-----\n" +
             "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQClJ8NzPErtMRQA\n" +
             "xomK59i1GBhwuAI2ZD82W3bkWczx8OrVzfB49hltqeMl7hDJji1CaerQNDTHz7kA\n" +
@@ -52,7 +58,7 @@ public class LicenseGenerator {
             "V3mQ4K8mR9L2mX5N8K3V5mL9XQrZPmBN8L6V3mQ4K8mR9L2mX5\n" +
             "-----END PRIVATE KEY-----\n";
 
-    public static final String PUBLIC_KEY =
+    private static final String DEV_PUBLIC_KEY =
             "-----BEGIN PUBLIC KEY-----\n" +
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApSfDczxK7TEUAMaJiufY\n" +
             "tRgYcLgCNmQ/Nlt25FnM8fDq1c3wePYZbanjJe4QyY4tQmnq0DQ0x8+5AAdkL/lS\n" +
@@ -63,7 +69,33 @@ public class LicenseGenerator {
             "zwIDAQAB\n" +
             "-----END PUBLIC KEY-----\n";
 
-    private static final String AES_KEY = "xuhuan2021__mms!";
+    private static final String DEV_AES_KEY = "xuhuan2021__mms!";
+
+    public LicenseGenerator(
+            @Value("${license.rsa.private-key:#{null}}") String privateKey,
+            @Value("${license.rsa.public-key:#{null}}") String publicKey,
+            @Value("${license.aes.key:#{null}}") String aesKey) {
+        this.privateKey = (privateKey != null && !privateKey.isBlank()) ? privateKey : DEV_PRIVATE_KEY;
+        this.publicKey = (publicKey != null && !publicKey.isBlank()) ? publicKey : DEV_PUBLIC_KEY;
+        this.aesKey = (aesKey != null && !aesKey.isBlank()) ? aesKey : DEV_AES_KEY;
+
+        if (this.privateKey.equals(DEV_PRIVATE_KEY)) {
+            log.warn("==============================================");
+            log.warn("  ⚠  License RSA 私钥使用开发默认值！");
+            log.warn("  生产环境请设置环境变量 LICENSE_RSA_PRIVATE_KEY");
+            log.warn("==============================================");
+        }
+        if (this.aesKey.equals(DEV_AES_KEY)) {
+            log.warn("==============================================");
+            log.warn("  ⚠  License AES 密钥使用开发默认值！");
+            log.warn("  生产环境请设置环境变量 LICENSE_AES_KEY");
+            log.warn("==============================================");
+        }
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
 
     /**
      * Generate the data JSON string for license.
@@ -85,9 +117,9 @@ public class LicenseGenerator {
      * Sign the data JSON with RSA private key (SHA256withRSA) and return base64-encoded signature.
      */
     public String signData(String dataJson) throws Exception {
-        PrivateKey privateKey = getPrivateKeyFromString(PRIVATE_KEY);
+        PrivateKey pk = getPrivateKeyFromString(privateKey);
         Signature sig = Signature.getInstance("SHA256withRSA");
-        sig.initSign(privateKey);
+        sig.initSign(pk);
         sig.update(dataJson.getBytes(StandardCharsets.UTF_8));
         byte[] signatureBytes = sig.sign();
         return Base64.getEncoder().encodeToString(signatureBytes);
@@ -127,7 +159,7 @@ public class LicenseGenerator {
 
     private String encryptAES(String data) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(AES_KEY.getBytes(StandardCharsets.UTF_8), "AES"));
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(aesKey.getBytes(StandardCharsets.UTF_8), "AES"));
         return Base64.getEncoder().encodeToString(cipher.doFinal(data.getBytes(StandardCharsets.UTF_8)));
     }
 

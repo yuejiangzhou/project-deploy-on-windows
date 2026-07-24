@@ -17,8 +17,11 @@ public class JwtTokenProvider {
     private final SecretKey secretKey;
     private final long expirationMs;
 
-    public JwtTokenProvider(@Value("${jwt.secret:deploy-manager-secret-key-for-jwt-2025}") String secret,
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret,
                             @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
+        if (secret == null || secret.isBlank() || secret.contains("change-in-production")) {
+            throw new IllegalArgumentException("JWT secret 未配置或仍为默认值，请设置环境变量 JWT_SECRET");
+        }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
     }

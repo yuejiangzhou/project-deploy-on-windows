@@ -16,7 +16,7 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 
 @RestController
-@RequestMapping("/api/license")
+@RequestMapping("/api/licenses")
 @RequiredArgsConstructor
 public class LicenseController {
 

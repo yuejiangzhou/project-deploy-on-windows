@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -211,24 +212,17 @@ public class InfrastructureService {
                         if (relativePath == null || relativePath.isEmpty()) continue;
 
                         String objectKey = basePath + "/" + relativePath;
-                        byte[] data = new byte[(int) entry.getSize()];
-                        int offset = 0;
-                        int remaining = data.length;
-                        while (remaining > 0) {
-                            int read = tis.read(data, offset, remaining);
-                            if (read == -1) break;
-                            offset += read;
-                            remaining -= read;
-                        }
-                        try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
+                        // 流式上传，避免将整个 tar 条目加载到内存（防止 OOM）
+                        long entrySize = entry.getSize();
+                        try (InputStream entryStream = new TarEntryInputStream(tis, entrySize)) {
                             minioClient.putObject(PutObjectArgs.builder()
                                     .bucket(bucket)
                                     .object(objectKey)
-                                    .stream(bais, data.length, -1)
+                                    .stream(entryStream, entrySize, -1)
                                     .build());
                         }
                         uploadedObjects.add(objectKey);
-                        totalSize += data.length;
+                        totalSize += entrySize;
                         fileCount++;
                     }
                 }
@@ -240,7 +234,13 @@ public class InfrastructureService {
                         String relativePath = entry.getName();
                         if (relativePath == null || relativePath.isEmpty()) continue;
 
-                        byte[] data = new byte[(int) entry.getSize()];
+                        long entrySize = entry.getSize();
+                        // 7z 文件通常不会像 tar 那样有超大条目（JDK 级别），但仍加保护
+                        if (entrySize > 512 * 1024 * 1024) { // 超过 512MB 拒绝
+                            log.warn("7z entry too large ({}MB), skipping: {}", entrySize / 1024 / 1024, relativePath);
+                            continue;
+                        }
+                        byte[] data = new byte[(int) entrySize];
                         int offset = 0;
                         int remaining = data.length;
                         while (remaining > 0) {
@@ -363,6 +363,42 @@ public class InfrastructureService {
         if (!found) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
             log.info("Bucket created: {}", bucket);
+        }
+    }
+
+    /**
+     * 流式读取单个 tar 条目的 InputStream，避免将整个条目加载到内存。
+     * 读取到 entrySize 字节后自动返回 -1（EOF）。
+     */
+    private static class TarEntryInputStream extends InputStream {
+        private final InputStream source;
+        private long remaining;
+
+        TarEntryInputStream(InputStream source, long size) {
+            this.source = source;
+            this.remaining = size;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (remaining <= 0) return -1;
+            int b = source.read();
+            if (b != -1) remaining--;
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (remaining <= 0) return -1;
+            int toRead = (int) Math.min(len, remaining);
+            int read = source.read(b, off, toRead);
+            if (read > 0) remaining -= read;
+            return read;
+        }
+
+        @Override
+        public void close() throws IOException {
+            // 不关闭底层 TarArchiveInputStream，由外层管理
         }
     }
 }

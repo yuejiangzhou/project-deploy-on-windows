@@ -23,6 +23,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -38,6 +41,12 @@ public class ChunkedUploadService {
 
     private String chunkDir;
     private final Map<String, ChunkUploadSession> sessions = new ConcurrentHashMap<>();
+    private ScheduledExecutorSessionCleaner sessionCleaner;
+
+    /** Session 过期时间：30 分钟未活动自动清理 */
+    private static final long SESSION_TIMEOUT_MINUTES = 30;
+    /** 清理扫描间隔：5 分钟 */
+    private static final long CLEANUP_INTERVAL_MINUTES = 5;
 
     @PostConstruct
     public void init() {
@@ -47,11 +56,18 @@ public class ChunkedUploadService {
         } catch (Exception e) {
             log.warn("Failed to create chunk directory: {}", chunkDir, e);
         }
-        log.info("Chunked upload directory initialized: {}", chunkDir);
+        // 启动定时清理任务
+        sessionCleaner = new ScheduledExecutorSessionCleaner();
+        sessionCleaner.start();
+        log.info("Chunked upload directory initialized: {} (session timeout: {}min, cleanup interval: {}min)",
+                chunkDir, SESSION_TIMEOUT_MINUTES, CLEANUP_INTERVAL_MINUTES);
     }
 
     @PreDestroy
     public void cleanup() {
+        if (sessionCleaner != null) {
+            sessionCleaner.stop();
+        }
         sessions.clear();
         try {
             Files.walk(Paths.get(chunkDir), 1)
@@ -84,6 +100,7 @@ public class ChunkedUploadService {
         session.versionTag = versionTag;
         session.receivedChunks = new ConcurrentHashMap<>();
         session.sessionDir = sessionDir;
+        session.lastActivityTime = System.currentTimeMillis();
 
         sessions.put(uploadId, session);
 
@@ -98,6 +115,8 @@ public class ChunkedUploadService {
         if (session == null) {
             throw new RuntimeException("上传会话不存在或已过期: " + uploadId);
         }
+
+        session.lastActivityTime = System.currentTimeMillis();
 
         Path chunkPath = session.sessionDir.resolve("chunk_" + chunkIndex);
         try (InputStream is = chunkFile.getInputStream()) {
@@ -195,6 +214,7 @@ public class ChunkedUploadService {
         String versionTag;
         ConcurrentHashMap<Integer, Boolean> receivedChunks;
         Path sessionDir;
+        volatile long lastActivityTime;
     }
 
     private static class SequenceChunkInputStream extends InputStream {
@@ -248,6 +268,58 @@ public class ChunkedUploadService {
         public void close() throws java.io.IOException {
             if (currentStream != null) {
                 currentStream.close();
+            }
+        }
+    }
+
+    /**
+     * 定时清理过期 session 和对应的磁盘 chunk 文件。
+     * 低资源环境友好：单线程 ScheduledExecutor，清理间隔可配置。
+     */
+    private class ScheduledExecutorSessionCleaner {
+        private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "chunk-session-cleaner");
+            t.setDaemon(true);
+            return t;
+        });
+
+        void start() {
+            executor.scheduleWithFixedDelay(this::cleanExpiredSessions,
+                    CLEANUP_INTERVAL_MINUTES, CLEANUP_INTERVAL_MINUTES, TimeUnit.MINUTES);
+        }
+
+        void stop() {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private void cleanExpiredSessions() {
+            long now = System.currentTimeMillis();
+            long timeoutMillis = TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES);
+            int cleaned = 0;
+
+            for (Map.Entry<String, ChunkUploadSession> entry : sessions.entrySet()) {
+                ChunkUploadSession session = entry.getValue();
+                if (now - session.lastActivityTime > timeoutMillis) {
+                    sessions.remove(entry.getKey());
+                    try {
+                        deleteDirectory(session.sessionDir);
+                    } catch (Exception e) {
+                        log.warn("Failed to cleanup expired chunk session: {}", entry.getKey(), e);
+                    }
+                    cleaned++;
+                }
+            }
+
+            if (cleaned > 0) {
+                log.info("Cleaned {} expired chunk upload session(s)", cleaned);
             }
         }
     }
