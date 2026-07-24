@@ -1,7 +1,8 @@
 package com.company.deploy.controller;
 
-import com.company.deploy.common.Result;
 import com.company.deploy.common.PageResult;
+import com.company.deploy.common.Result;
+import com.company.deploy.common.SecurityUtils;
 import com.company.deploy.dto.PackageProgressDTO;
 import com.company.deploy.dto.PackageStartRequest;
 import com.company.deploy.entity.PackageRecord;
@@ -35,15 +36,15 @@ public class PackageController {
         try {
             String taskId = packageService.startPackage(request.getProjectId(), request.getPassword());
             operationLogService.logSuccess("PACKAGE", "START", "PROJECT", request.getProjectId(),
-                    null, "启动打包任务: " + taskId, "admin", httpRequest.getRemoteAddr());
+                    null, "启动打包任务: " + taskId, SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(Collections.singletonMap("taskId", taskId));
         } catch (IllegalArgumentException e) {
             operationLogService.logFailure("PACKAGE", "START", "PROJECT", request.getProjectId(),
-                    null, "打包参数错误: " + e.getMessage(), "admin", httpRequest.getRemoteAddr());
+                    null, "打包参数错误: " + e.getMessage(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.error(400, e.getMessage());
         } catch (RuntimeException e) {
             operationLogService.logFailure("PACKAGE", "START", "PROJECT", request.getProjectId(),
-                    null, "打包失败: " + e.getMessage(), "admin", httpRequest.getRemoteAddr());
+                    null, "打包失败: " + e.getMessage(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             // 项目不存在等业务异常返回 404
             String msg = e.getMessage();
             if (msg != null && msg.contains("不存在")) {
@@ -82,7 +83,7 @@ public class PackageController {
         }
 
         operationLogService.logSuccess("PACKAGE", "DOWNLOAD", "PACKAGE", id,
-                record.getFileName(), "下载包: " + record.getFileName(), "admin", httpRequest.getRemoteAddr());
+                record.getFileName(), "下载包: " + record.getFileName(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
 
         response.setContentType("application/zip");
         String encodedName = URLEncoder.encode(record.getFileName(), "UTF-8")
@@ -111,7 +112,7 @@ public class PackageController {
         }
         packageService.deletePackage(id);
         operationLogService.logSuccess("PACKAGE", "DELETE", "PACKAGE", id,
-                record.getFileName(), "删除包: " + record.getFileName(), "admin", httpRequest.getRemoteAddr());
+                record.getFileName(), "删除包: " + record.getFileName(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success();
     }
 }

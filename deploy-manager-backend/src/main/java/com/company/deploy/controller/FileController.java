@@ -1,6 +1,7 @@
 package com.company.deploy.controller;
 
 import com.company.deploy.common.Result;
+import com.company.deploy.common.SecurityUtils;
 import com.company.deploy.dto.FileTreeNode;
 import com.company.deploy.entity.UploadedFile;
 import com.company.deploy.service.ChunkedUploadService;
@@ -68,7 +69,7 @@ public class FileController {
         UploadedFile uploaded = fileService.uploadFile(file, projectId, type, date, versionTag);
         operationLogService.logSuccess("FILE", "UPLOAD", "FILE", uploaded.getId(),
                 uploaded.getFileName(), "上传文件: " + uploaded.getFileName() + " (类型: " + type + ")",
-                "admin", httpRequest.getRemoteAddr());
+                SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success(uploaded);
     }
 
@@ -85,7 +86,7 @@ public class FileController {
         UploadedFile uploaded = fileService.uploadFolder(files, projectId, type, date, folderName, versionTag);
         operationLogService.logSuccess("FILE", "UPLOAD_FOLDER", "FILE", uploaded.getId(),
                 uploaded.getFileName(), "上传文件夹: " + uploaded.getFileName() + " (" + files.size() + " 个文件)",
-                "admin", httpRequest.getRemoteAddr());
+                SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success(uploaded);
     }
 
@@ -93,7 +94,7 @@ public class FileController {
     public Result<Void> deleteFile(@PathVariable Long id, HttpServletRequest httpRequest) throws Exception {
         fileService.deleteFile(id);
         operationLogService.logSuccess("FILE", "DELETE", "FILE", id,
-                null, "删除文件ID: " + id, "admin", httpRequest.getRemoteAddr());
+                null, "删除文件ID: " + id, SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success();
     }
 
@@ -110,7 +111,7 @@ public class FileController {
         Map<String, Object> result = chunkedUploadService.initUpload(fileName, fileSize, totalChunks, projectId, type, versionTag);
         operationLogService.logSuccess("FILE", "CHUNK_INIT", "FILE", null,
                 fileName, "初始化分片上传: " + fileName + " (" + totalChunks + " 片)",
-                "admin", httpRequest.getRemoteAddr());
+                SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success(result);
     }
 
@@ -135,7 +136,7 @@ public class FileController {
             UploadedFile uploaded = chunkedUploadService.completeUpload(uploadId);
             operationLogService.logSuccess("FILE", "CHUNK_COMPLETE", "FILE", uploaded.getId(),
                     uploaded.getFileName(), "分片上传完成: " + uploaded.getFileName(),
-                    "admin", httpRequest.getRemoteAddr());
+                    SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(uploaded);
         } catch (Exception e) {
             return Result.error("合并分片失败: " + e.getMessage());

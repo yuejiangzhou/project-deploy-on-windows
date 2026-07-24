@@ -1,6 +1,7 @@
 package com.company.deploy.controller;
 
 import com.company.deploy.common.Result;
+import com.company.deploy.common.SecurityUtils;
 import com.company.deploy.entity.UploadedFile;
 import com.company.deploy.enums.FileTypeEnum;
 import com.company.deploy.service.InfrastructureService;
@@ -54,13 +55,13 @@ public class InfrastructureController {
             UploadedFile uploaded = infrastructureService.uploadComponent(type, file, version, tag, initState, belongsTo);
             operationLogService.logSuccess("INFRA", "UPLOAD", "COMPONENT", uploaded.getId(),
                     uploaded.getFileName(), "上传组件[" + type + "]: " + uploaded.getFileName(),
-                    "admin", httpRequest.getRemoteAddr());
+                    SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(uploaded);
         } catch (Exception e) {
             log.error("Upload infrastructure component failed", e);
             operationLogService.logFailure("INFRA", "UPLOAD", "COMPONENT", null,
                     file.getOriginalFilename(), "上传组件[" + type + "]失败: " + e.getMessage(),
-                    "admin", httpRequest.getRemoteAddr());
+                    SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.error("上传失败: " + e.getMessage());
         }
     }
@@ -80,7 +81,7 @@ public class InfrastructureController {
             UploadedFile uploaded = infrastructureService.uploadComponentFolder(type, files, folderName, version, tag, initState, belongsTo);
             operationLogService.logSuccess("INFRA", "UPLOAD_FOLDER", "COMPONENT", uploaded.getId(),
                     uploaded.getFileName(), "上传组件文件夹[" + type + "]: " + uploaded.getFileName() + " (" + files.size() + " 文件)",
-                    "admin", httpRequest.getRemoteAddr());
+                    SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(uploaded);
         } catch (Exception e) {
             log.error("Upload infrastructure folder failed", e);
@@ -102,7 +103,7 @@ public class InfrastructureController {
             UploadedFile uploaded = infrastructureService.uploadComponentZip(type, zipFile, version, tag, initState, belongsTo);
             operationLogService.logSuccess("INFRA", "UPLOAD_ZIP", "COMPONENT", uploaded.getId(),
                     uploaded.getFileName(), "ZIP上传解压[" + type + "]: " + uploaded.getFileName(),
-                    "admin", httpRequest.getRemoteAddr());
+                    SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(uploaded);
         } catch (Exception e) {
             log.error("Upload infrastructure zip failed", e);
@@ -121,7 +122,7 @@ public class InfrastructureController {
             }
             infrastructureService.deleteComponent(type, id);
             operationLogService.logSuccess("INFRA", "DELETE", "COMPONENT", id,
-                    null, "删除组件[" + type + "]: ID=" + id, "admin", httpRequest.getRemoteAddr());
+                    null, "删除组件[" + type + "]: ID=" + id, SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success();
         } catch (Exception e) {
             log.error("Delete infrastructure component failed", e);
@@ -140,7 +141,7 @@ public class InfrastructureController {
             UploadedFile updated = infrastructureService.updateComponent(id, updates);
             operationLogService.logSuccess("INFRA", "UPDATE", "COMPONENT", id,
                     updated.getFileName(), "更新组件[" + type + "]: " + updated.getFileName(),
-                    "admin", httpRequest.getRemoteAddr());
+                    SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(updated);
         } catch (Exception e) {
             log.error("Update infrastructure component failed", e);

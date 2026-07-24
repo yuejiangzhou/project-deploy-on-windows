@@ -1,9 +1,5 @@
 <template>
-  <main class="flex min-h-screen" style="background: var(--color-bg);">
-    <AppSidebar />
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <AppHeader :breadcrumbs="breadcrumbList" />
-      <div class="flex-1 overflow-y-auto p-8" style="background: var(--color-bg);">
+  <div class="p-8" style="background: var(--color-bg);">
 
         <!-- Page Title -->
         <h1 class="font-heading text-2xl mb-1" style="color: var(--color-text-primary);">资源上传</h1>
@@ -352,8 +348,7 @@
           </template>
         </div>
 
-      </div>
-    </div>
+  </div>
 
     <!-- Hidden input for infra upload (archive only) -->
     <input type="file" ref="infraFileRef" style="display: none;"
@@ -419,7 +414,7 @@
         </div>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <script setup>
@@ -431,18 +426,12 @@ import {
   AlertTriangle, FileArchive, Blocks, Plus, Box, Settings,
   Package, HardDrive, Database, Globe, Cog, X, FileBox
 } from 'lucide-vue-next'
-import AppSidebar from '@/components/AppSidebar.vue'
-import AppHeader from '@/components/AppHeader.vue'
 import { getProjectList } from '@/api/project'
 import { listFiles, uploadFile, uploadFolder, deleteFile as deleteFileApi, uploadLargeFile } from '@/api/file'
 import { getInfraList, uploadInfraZip, deleteInfraFile as deleteInfraFileApi, editInfraFile } from '@/api/infrastructure'
 import { formatFileSize, formatDateTime } from '@/utils/format'
 
 const route = useRoute()
-
-const breadcrumbList = computed(() => [
-  { text: '资源上传' }
-])
 
 const uploadHover = ref(false)
 const dragOver = ref(false)

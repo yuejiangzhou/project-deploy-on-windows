@@ -70,6 +70,8 @@ public class Project {
 
     private Boolean includeNginx;
 
+    private Boolean includeRedis;
+
     private Long jdkComponentId;
 
     private Long mysqlComponentId;
@@ -79,6 +81,8 @@ public class Project {
     private Long nginxComponentId;
 
     private Long engineComponentId;
+
+    private Long redisComponentId;
 
     private String jdkVersion;
 
@@ -93,6 +97,8 @@ public class Project {
     private String nginxVersion;
 
     private String engineVersion;
+
+    private Integer redisPort;
 
     private LocalDateTime createdAt;
 

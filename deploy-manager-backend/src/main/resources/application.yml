@@ -64,3 +64,7 @@ logging:
     org.springframework: INFO
     io.minio: INFO
 
+# JWT 配置
+jwt:
+  secret: deploy-manager-secret-key-for-jwt-2025
+  expiration-ms: 86400000

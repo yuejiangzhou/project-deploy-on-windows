@@ -1,5 +1,5 @@
 -- ============================================
--- DeployManager 数据库建表脚本
+-- DeployManager 数据库建表脚本（完整最新版 V2）
 -- 数据库: MySQL 8.0
 -- 字符集: utf8mb4
 -- ============================================
@@ -11,7 +11,24 @@ CREATE DATABASE IF NOT EXISTS `deploy_manager`
 USE `deploy_manager`;
 
 -- ----------------------------------------
--- 1. 项目表
+-- 1. 用户表
+-- ----------------------------------------
+CREATE TABLE `user` (
+  `id`           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `username`     VARCHAR(50)  NOT NULL                COMMENT '用户名',
+  `password`     VARCHAR(200) NOT NULL                COMMENT '密码（BCrypt加密）',
+  `display_name` VARCHAR(100) DEFAULT NULL              COMMENT '显示名称',
+  `role`         VARCHAR(20)  NOT NULL DEFAULT 'DEVELOPER' COMMENT '角色: ADMIN/DEVELOPER',
+  `status`       VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE'  COMMENT '状态: ACTIVE/DISABLED',
+  `last_login`   DATETIME     DEFAULT NULL              COMMENT '最后登录时间',
+  `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+-- ----------------------------------------
+-- 2. 项目表
 -- ----------------------------------------
 CREATE TABLE `project` (
   `id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -40,10 +57,12 @@ CREATE TABLE `project` (
   `minio_component_id`  BIGINT       DEFAULT NULL              COMMENT '选定的MinIO组件ID',
   `nginx_component_id`  BIGINT       DEFAULT NULL              COMMENT '选定的Nginx组件ID',
   `engine_component_id` BIGINT       DEFAULT NULL              COMMENT '选定的引擎组件ID',
+  `redis_component_id`  BIGINT       DEFAULT NULL              COMMENT '选定的Redis组件ID',
   `include_jdk`         TINYINT(1)   NOT NULL DEFAULT 1       COMMENT '是否包含JDK: 0否 1是',
   `include_mysql`       TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '是否包含MySQL: 0否 1是',
   `include_minio`       TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '是否包含MinIO: 0否 1是',
   `include_nginx`       TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '是否包含Nginx: 0否 1是',
+  `include_redis`       TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '是否包含Redis: 0否 1是',
   `jdk_version`         VARCHAR(50)  DEFAULT NULL              COMMENT 'JDK版本',
   `mysql_version`       VARCHAR(50)  DEFAULT NULL              COMMENT 'MySQL版本',
   `mysql_config_state`  VARCHAR(20)  DEFAULT 'clean'           COMMENT 'MySQL配置状态: clean纯净版/configured已初始化',
@@ -51,6 +70,7 @@ CREATE TABLE `project` (
   `minio_config_state`  VARCHAR(20)  DEFAULT 'clean'           COMMENT 'MinIO配置状态: clean纯净版/configured已初始化',
   `nginx_version`       VARCHAR(50)  DEFAULT NULL              COMMENT 'Nginx版本',
   `engine_version`      VARCHAR(50)  DEFAULT NULL              COMMENT '引擎版本',
+  `redis_port`          INT          DEFAULT 6379              COMMENT 'Redis端口',
   `created_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted`             TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '逻辑删除: 0否 1是',
@@ -60,7 +80,7 @@ CREATE TABLE `project` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目表';
 
 -- ----------------------------------------
--- 2. 上传文件表
+-- 3. 上传文件表
 -- ----------------------------------------
 CREATE TABLE `uploaded_file` (
   `id`              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -74,10 +94,12 @@ CREATE TABLE `uploaded_file` (
   `folder_path`     VARCHAR(500) DEFAULT NULL              COMMENT '文件夹路径，如 ecom/jar/2026-06-28',
   `upload_date`     DATE         DEFAULT NULL              COMMENT '上传日期(用于三级目录的日期级别)',
   `version_tag`     VARCHAR(100) DEFAULT NULL              COMMENT '版本标签',
-  `version`         VARCHAR(100) DEFAULT NULL              COMMENT '版本号',
+  `version`         VARCHAR(50)  DEFAULT NULL              COMMENT '版本号',
+  `version_label`   VARCHAR(50)  DEFAULT NULL              COMMENT '版本标签',
   `tag`             VARCHAR(100) DEFAULT NULL              COMMENT '标签',
   `init_state`      VARCHAR(20)  DEFAULT NULL              COMMENT '初始化状态: clean纯净版/initialized已初始化',
-  `belongs_to`      VARCHAR(100) DEFAULT NULL              COMMENT '所属系统',
+  `belongs_to`      VARCHAR(100) DEFAULT NULL              COMMENT '所属系统（兼容旧字段）',
+  `belong_system`   VARCHAR(50)  DEFAULT NULL              COMMENT '所属系统',
   `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
   `deleted`         TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '逻辑删除: 0否 1是',
   PRIMARY KEY (`id`),
@@ -86,7 +108,7 @@ CREATE TABLE `uploaded_file` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='上传文件表';
 
 -- ----------------------------------------
--- 3. 打包产物表
+-- 4. 打包产物表
 -- ----------------------------------------
 CREATE TABLE `package_record` (
   `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -105,7 +127,7 @@ CREATE TABLE `package_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='打包产物表';
 
 -- ----------------------------------------
--- 4. 打包任务表（用于进度追踪）
+-- 5. 打包任务表（用于进度追踪）
 -- ----------------------------------------
 CREATE TABLE `package_task` (
   `id`            VARCHAR(36)  NOT NULL                COMMENT '任务ID(UUID)',
@@ -120,6 +142,9 @@ CREATE TABLE `package_task` (
   KEY `idx_project` (`project_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='打包任务表';
 
+-- ----------------------------------------
+-- 6. 操作日志表
+-- ----------------------------------------
 CREATE TABLE `operation_log` (
   `id`            BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '日志ID',
   `module`        VARCHAR(50)  NOT NULL                  COMMENT '模块: PROJECT/FILE/INFRA/PACKAGE',
@@ -136,3 +161,32 @@ CREATE TABLE `operation_log` (
   KEY `idx_module` (`module`),
   KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
+
+-- ----------------------------------------
+-- 7. License 记录表
+-- ----------------------------------------
+CREATE TABLE `license_record` (
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `project_id`    BIGINT       DEFAULT NULL              COMMENT '所属项目ID',
+  `customer_name` VARCHAR(200) DEFAULT NULL              COMMENT '客户名称',
+  `license_file`  VARCHAR(500) DEFAULT NULL              COMMENT 'License文件路径',
+  `expire_date`   DATETIME     DEFAULT NULL              COMMENT '到期日期',
+  `trial_days`    INT          DEFAULT NULL              COMMENT '试用天数',
+  `type`          VARCHAR(20)  NOT NULL DEFAULT 'TRIAL'  COMMENT '类型: TRIAL/OFFICIAL/RENEWAL',
+  `status`        VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/EXPIRED/REVOKED',
+  `parent_id`     BIGINT       DEFAULT NULL              COMMENT '父License ID（续期场景）',
+  `generated_by`  BIGINT       DEFAULT NULL              COMMENT '生成人用户ID',
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_project` (`project_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='License记录表';
+
+-- ----------------------------------------
+-- 8. 初始化默认管理员用户
+-- 密码: admin123 (BCrypt加密)
+-- ----------------------------------------
+INSERT INTO `user` (`username`, `password`, `display_name`, `role`)
+VALUES ('admin', '{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '管理员', 'ADMIN')
+ON DUPLICATE KEY UPDATE `username` = `username`;

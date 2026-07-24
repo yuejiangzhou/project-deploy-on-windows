@@ -1,169 +1,162 @@
 <template>
-  <main class="flex min-h-screen" style="background: var(--color-bg);">
-    <AppSidebar />
-    <div class="flex-1 flex flex-col" style="min-width: 0;">
-      <AppHeader :breadcrumbs="breadcrumbList" />
+  <div class="p-6">
+    <!-- Page Title Row -->
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="font-heading text-xl" style="color: var(--color-text-primary);">项目管理</h1>
+      <div class="flex items-center gap-2">
+        <button class="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors"
+                style="border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-bg-elevated);"
+                @click="openBatchDownload"
+                @mouseenter="batchBtnHover = true" @mouseleave="batchBtnHover = false"
+                :style="batchBtnHover ? { borderColor: 'var(--color-primary)', color: 'var(--color-primary)' } : {}">
+          <Download style="width: 16px; height: 16px;" />
+          批量下载
+        </button>
+        <button class="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium cursor-pointer border-0"
+                style="background: var(--color-primary); color: var(--color-text-inverse);"
+                @click="showCreateModal = true"
+                @mouseenter="createBtnHover = true" @mouseleave="createBtnHover = false"
+                :style="createBtnHover ? { background: 'var(--color-primary-hover)' } : {}">
+          <Plus style="width: 16px; height: 16px;" />
+          新建项目
+        </button>
+      </div>
+    </div>
 
-      <div class="flex-1 p-6 overflow-auto">
-        <!-- Page Title Row -->
-        <div class="flex items-center justify-between mb-6">
-          <h1 class="font-heading text-xl" style="color: var(--color-text-primary);">项目管理</h1>
-          <div class="flex items-center gap-2">
-            <button class="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors"
-                    style="border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-bg-elevated);"
-                    @click="openBatchDownload"
-                    @mouseenter="batchBtnHover = true" @mouseleave="batchBtnHover = false"
-                    :style="batchBtnHover ? { borderColor: 'var(--color-primary)', color: 'var(--color-primary)' } : {}">
-              <Download style="width: 16px; height: 16px;" />
-              批量下载
-            </button>
-            <button class="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium cursor-pointer border-0"
-                    style="background: var(--color-primary); color: var(--color-text-inverse);"
-                    @click="showCreateModal = true"
-                    @mouseenter="createBtnHover = true" @mouseleave="createBtnHover = false"
-                    :style="createBtnHover ? { background: 'var(--color-primary-hover)' } : {}">
-              <Plus style="width: 16px; height: 16px;" />
-              新建项目
-            </button>
-          </div>
+    <!-- Stats Cards (2 only) -->
+    <div class="grid gap-4 mb-6" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="rounded-lg p-4" style="background: var(--color-bg-elevated); border: 1px solid var(--color-border-light); box-shadow: var(--shadow-sm);">
+        <div class="flex items-center gap-2 mb-2">
+          <Folder style="width: 16px; height: 16px; color: var(--color-text-tertiary);" />
+          <span class="text-sm" style="color: var(--color-text-secondary);">总项目数</span>
         </div>
-
-        <!-- Stats Cards (2 only) -->
-        <div class="grid gap-4 mb-6" style="grid-template-columns: repeat(2, 1fr);">
-          <div class="rounded-lg p-4" style="background: var(--color-bg-elevated); border: 1px solid var(--color-border-light); box-shadow: var(--shadow-sm);">
-            <div class="flex items-center gap-2 mb-2">
-              <Folder style="width: 16px; height: 16px; color: var(--color-text-tertiary);" />
-              <span class="text-sm" style="color: var(--color-text-secondary);">总项目数</span>
-            </div>
-            <div class="font-heading text-2xl" style="color: var(--color-primary);">{{ stats.total || 0 }}</div>
-          </div>
-          <div class="rounded-lg p-4" style="background: var(--color-bg-elevated); border: 1px solid var(--color-border-light); box-shadow: var(--shadow-sm);">
-            <div class="flex items-center gap-2 mb-2">
-              <PackageCheck style="width: 16px; height: 16px; color: var(--color-text-tertiary);" />
-              <span class="text-sm" style="color: var(--color-text-secondary);">已打包数</span>
-            </div>
-            <div class="font-heading text-2xl" style="color: var(--state-success);">{{ stats.packaged || 0 }}</div>
-          </div>
+        <div class="font-heading text-2xl" style="color: var(--color-primary);">{{ stats.total || 0 }}</div>
+      </div>
+      <div class="rounded-lg p-4" style="background: var(--color-bg-elevated); border: 1px solid var(--color-border-light); box-shadow: var(--shadow-sm);">
+        <div class="flex items-center gap-2 mb-2">
+          <PackageCheck style="width: 16px; height: 16px; color: var(--color-text-tertiary);" />
+          <span class="text-sm" style="color: var(--color-text-secondary);">已打包数</span>
         </div>
+        <div class="font-heading text-2xl" style="color: var(--state-success);">{{ stats.packaged || 0 }}</div>
+      </div>
+    </div>
 
-        <!-- Search Bar -->
-        <div class="flex items-center gap-3 mb-4">
-          <div class="relative flex-1" style="max-width: 320px;">
-            <Search style="width: 16px; height: 16px; color: var(--color-text-tertiary); position: absolute; left: 12px; top: 50%; transform: translateY(-50%);" />
-            <input type="text" v-model="searchKeyword" placeholder="搜索项目..."
-                   class="w-full pl-9 pr-3 py-2 rounded-md text-sm outline-none"
-                   style="background: var(--color-bg-elevated); border: 1px solid var(--color-border); color: var(--color-text-primary);"
-                   @focus="$event.target.style.borderColor='var(--color-primary)'"
-                   @blur="$event.target.style.borderColor='var(--color-border)'"
-                   @input="handleSearch">
-          </div>
-        </div>
+    <!-- Search Bar -->
+    <div class="flex items-center gap-3 mb-4">
+      <div class="relative flex-1" style="max-width: 320px;">
+        <Search style="width: 16px; height: 16px; color: var(--color-text-tertiary); position: absolute; left: 12px; top: 50%; transform: translateY(-50%);" />
+        <input type="text" v-model="searchKeyword" placeholder="搜索项目..."
+               class="w-full pl-9 pr-3 py-2 rounded-md text-sm outline-none"
+               style="background: var(--color-bg-elevated); border: 1px solid var(--color-border); color: var(--color-text-primary);"
+               @focus="$event.target.style.borderColor='var(--color-primary)'"
+               @blur="$event.target.style.borderColor='var(--color-border)'"
+               @input="handleSearch">
+      </div>
+    </div>
 
-        <!-- Loading State -->
-        <div v-if="loading" class="text-center py-8 text-sm" style="color: var(--color-text-tertiary);">加载中...</div>
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-8 text-sm" style="color: var(--color-text-tertiary);">加载中...</div>
 
-        <!-- Project Table -->
-        <div v-if="!loading" class="rounded-lg overflow-hidden" style="background: var(--color-bg-elevated); border: 1px solid var(--color-border-light); box-shadow: var(--shadow-sm);">
-          <table class="w-full" style="border-collapse: collapse;">
-            <thead>
-              <tr style="border-bottom: 1px solid var(--color-border-light);">
-                <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">项目名称</th>
-                <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">JAR包</th>
-                <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">Vue前端</th>
-                <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">状态</th>
-                <th class="text-right px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in projectList" :key="p.id" class="table-row-hover" style="border-bottom: 1px solid var(--color-border-light);">
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-2.5">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-md" :style="getProjectIconBg(p.name)">
-                      <component :is="getProjectIcon(p.name)" style="width: 16px; height: 16px;" :style="{ color: getProjectIconColor(p.name) }" />
-                    </div>
-                    <div>
-                      <div class="text-sm font-medium" style="color: var(--color-text-primary);">{{ p.name }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-3">
-                  <span v-if="p.jarFileName" class="text-sm font-mono" style="color: var(--color-text-secondary);">{{ p.jarFileName }}</span>
-                  <span v-else class="text-sm font-mono" style="color: var(--color-text-tertiary);">未上传</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span v-if="p.vueConfigured" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--state-success-bg); color: var(--state-success);">已配置</span>
-                  <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--color-bg-sunken); color: var(--color-text-tertiary);">未配置</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span :class="getStatusClass(p.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
-                    {{ getStatusText(p.status) }}
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <button class="px-3 py-1 rounded text-xs font-medium cursor-pointer border-0"
-                            style="background: var(--color-primary); color: var(--color-text-inverse);"
-                            @click="goToConfig(p.id)">
-                      配置
-                    </button>
-                    <button class="px-3 py-1 rounded text-xs font-medium cursor-pointer border-0"
-                            style="background: var(--state-success); color: var(--color-text-inverse);"
-                            @click="goToPackage(p.id)">
-                      打包
-                    </button>
-                    <button class="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
-                            style="border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-bg-elevated);"
-                            @mouseenter="(e) => { e.currentTarget.style.borderColor='var(--color-primary)'; e.currentTarget.style.color='var(--color-primary)'; }"
-                            @mouseleave="(e) => { e.currentTarget.style.borderColor='var(--color-border)'; e.currentTarget.style.color='var(--color-text-secondary)'; }"
-                            @click="downloadLatest(p)">
-                      <Download style="width: 13px; height: 13px;" />
-                      <span>下载最新版本</span>
-                    </button>
-                    <button class="px-3 py-1 rounded text-xs font-medium cursor-pointer border-0"
-                            style="background: var(--color-bg-sunken); color: var(--color-text-secondary);"
-                            @click="handleDelete(p)">
-                      删除
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- Project Table -->
+    <div v-if="!loading" class="rounded-lg overflow-hidden" style="background: var(--color-bg-elevated); border: 1px solid var(--color-border-light); box-shadow: var(--shadow-sm);">
+      <table class="w-full" style="border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--color-border-light);">
+            <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">项目名称</th>
+            <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">JAR包</th>
+            <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">Vue前端</th>
+            <th class="text-left px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">状态</th>
+            <th class="text-right px-4 py-3 text-xs font-medium" style="color: var(--color-text-tertiary); background: var(--color-bg-sunken);">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in projectList" :key="p.id" class="table-row-hover" style="border-bottom: 1px solid var(--color-border-light);">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="flex items-center justify-center w-8 h-8 rounded-md" :style="getProjectIconBg(p.name)">
+                  <component :is="getProjectIcon(p.name)" style="width: 16px; height: 16px;" :style="{ color: getProjectIconColor(p.name) }" />
+                </div>
+                <div>
+                  <div class="text-sm font-medium" style="color: var(--color-text-primary);">{{ p.name }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <span v-if="p.jarFileName" class="text-sm font-mono" style="color: var(--color-text-secondary);">{{ p.jarFileName }}</span>
+              <span v-else class="text-sm font-mono" style="color: var(--color-text-tertiary);">未上传</span>
+            </td>
+            <td class="px-4 py-3">
+              <span v-if="p.vueConfigured" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--state-success-bg); color: var(--state-success);">已配置</span>
+              <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--color-bg-sunken); color: var(--color-text-tertiary);">未配置</span>
+            </td>
+            <td class="px-4 py-3">
+              <span :class="getStatusClass(p.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                {{ getStatusText(p.status) }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button class="px-3 py-1 rounded text-xs font-medium cursor-pointer border-0"
+                        style="background: var(--color-primary); color: var(--color-text-inverse);"
+                        @click="goToConfig(p.id)">
+                  配置
+                </button>
+                <button class="px-3 py-1 rounded text-xs font-medium cursor-pointer border-0"
+                        style="background: var(--state-success); color: var(--color-text-inverse);"
+                        @click="goToPackage(p.id)">
+                  打包
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
+                        style="border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-bg-elevated);"
+                        @mouseenter="(e) => { e.currentTarget.style.borderColor='var(--color-primary)'; e.currentTarget.style.color='var(--color-primary)'; }"
+                        @mouseleave="(e) => { e.currentTarget.style.borderColor='var(--color-border)'; e.currentTarget.style.color='var(--color-text-secondary)'; }"
+                        @click="downloadLatest(p)">
+                  <Download style="width: 13px; height: 13px;" />
+                  <span>下载最新版本</span>
+                </button>
+                <button class="px-3 py-1 rounded text-xs font-medium cursor-pointer border-0"
+                        style="background: var(--color-bg-sunken); color: var(--color-text-secondary);"
+                        @click="handleDelete(p)">
+                  删除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-        <!-- Table Footer Info -->
-        <div class="flex items-center justify-between mt-4 px-1">
-          <span class="text-xs" style="color: var(--color-text-tertiary);">共 {{ total }} 条记录 / {{ totalPages }} 页</span>
-          <div class="flex items-center gap-1">
-            <button class="px-2.5 py-1 rounded text-xs cursor-pointer border-0"
-                    :style="page <= 1
-                      ? { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)', opacity: 0.5, cursor: 'not-allowed' }
-                      : { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }"
-                    :disabled="page <= 1"
-                    @click="changePage(page - 1)">
-              上一页
-            </button>
-            <template v-for="p in pageNumbers" :key="'page-' + p">
-              <span v-if="p === '...'" class="px-2 text-xs" style="color: var(--color-text-tertiary);">...</span>
-              <button v-else
-                      class="px-2.5 py-1 rounded text-xs cursor-pointer border-0"
-                      :style="p === page
-                        ? { background: 'var(--color-primary)', color: 'var(--color-text-inverse)' }
-                        : { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }"
-                      @click="changePage(p)">
-                {{ p }}
-              </button>
-            </template>
-            <button class="px-2.5 py-1 rounded text-xs cursor-pointer border-0"
-                    :style="page >= totalPages
-                      ? { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)', opacity: 0.5, cursor: 'not-allowed' }
-                      : { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }"
-                    :disabled="page >= totalPages"
-                    @click="changePage(page + 1)">
-              下一页
-            </button>
-          </div>
-        </div>
+    <!-- Table Footer Info -->
+    <div class="flex items-center justify-between mt-4 px-1">
+      <span class="text-xs" style="color: var(--color-text-tertiary);">共 {{ total }} 条记录 / {{ totalPages }} 页</span>
+      <div class="flex items-center gap-1">
+        <button class="px-2.5 py-1 rounded text-xs cursor-pointer border-0"
+                :style="page <= 1
+                  ? { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)', opacity: 0.5, cursor: 'not-allowed' }
+                  : { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }"
+                :disabled="page <= 1"
+                @click="changePage(page - 1)">
+          上一页
+        </button>
+        <template v-for="p in pageNumbers" :key="'page-' + p">
+          <span v-if="p === '...'" class="px-2 text-xs" style="color: var(--color-text-tertiary);">...</span>
+          <button v-else
+                  class="px-2.5 py-1 rounded text-xs cursor-pointer border-0"
+                  :style="p === page
+                    ? { background: 'var(--color-primary)', color: 'var(--color-text-inverse)' }
+                    : { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }"
+                  @click="changePage(p)">
+            {{ p }}
+          </button>
+        </template>
+        <button class="px-2.5 py-1 rounded text-xs cursor-pointer border-0"
+                :style="page >= totalPages
+                  ? { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)', opacity: 0.5, cursor: 'not-allowed' }
+                  : { background: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }"
+                :disabled="page >= totalPages"
+                @click="changePage(page + 1)">
+          下一页
+        </button>
       </div>
     </div>
 
@@ -245,7 +238,7 @@
         </div>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <script setup>
@@ -256,15 +249,9 @@ import {
   Folder, PackageCheck, Search, Download, Plus,
   ShoppingCart, Database, Users, FileCheck
 } from 'lucide-vue-next'
-import AppSidebar from '@/components/AppSidebar.vue'
-import AppHeader from '@/components/AppHeader.vue'
 import { getProjectList, getProjectStats, createProject as createProjectApi, deleteProject, downloadLatestPackageUrl, getLatestPackage } from '@/api/project'
 
 const router = useRouter()
-
-const breadcrumbList = computed(() => [
-  { text: '项目管理' }
-])
 
 const batchBtnHover = ref(false)
 const createBtnHover = ref(false)

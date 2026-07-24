@@ -24,7 +24,7 @@
           >{{ crumb.text }}</span>
         </span>
       </template>
-      <span v-else class="font-medium" style="color: var(--color-text-primary);">{{ title }}</span>
+      <span v-else class="font-medium" style="color: var(--color-text-primary);">{{ pageTitle }}</span>
     </div>
     <div class="flex items-center gap-3">
       <div class="relative">
@@ -41,25 +41,51 @@
         <div
           class="flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium"
           style="background: var(--color-primary-light); color: var(--color-primary);"
-        >管</div>
-        <span class="text-sm font-medium" style="color: var(--color-text-primary);">管理员</span>
+        >{{ avatarText }}</div>
+        <span class="text-sm font-medium" style="color: var(--color-text-primary);">{{ displayName }}</span>
+        <button
+          class="ml-2 px-2 py-1 text-xs rounded cursor-pointer border-0 bg-transparent"
+          style="color: var(--color-text-tertiary);"
+          @click="handleLogout"
+          @mouseenter="(e) => { e.currentTarget.style.color = 'var(--state-error)'; }"
+          @mouseleave="(e) => { e.currentTarget.style.color = 'var(--color-text-tertiary)'; }"
+        >退出</button>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { Bell, ChevronRight } from 'lucide-vue-next'
 
-const props = defineProps({
-  title: { type: String, default: '' },
-  breadcrumbs: { type: Array, default: () => [] }
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+
+const pageTitle = computed(() => route.meta?.title || '')
+const displayName = computed(() => userStore.displayName || '管理员')
+
+const avatarText = computed(() => {
+  const name = displayName.value
+  return name ? name.charAt(0) : '管'
 })
 
-const router = useRouter()
+const breadcrumbs = computed(() => {
+  const matched = route.matched.filter(r => r.meta && r.meta.title)
+  return matched.map((r, index) => ({
+    text: r.meta.title,
+    link: index < matched.length - 1 ? r.path : null
+  }))
+})
 
 function goTo(path) {
   router.push(path)
+}
+
+async function handleLogout() {
+  await userStore.logout()
 }
 </script>

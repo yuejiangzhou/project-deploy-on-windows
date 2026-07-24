@@ -44,6 +44,10 @@ public class UploadedFile {
 
     private String belongsTo;
 
+    private String belongSystem;
+
+    private String versionLabel;
+
     private LocalDateTime createdAt;
 
     @TableLogic

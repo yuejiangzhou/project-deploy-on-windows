@@ -1,9 +1,5 @@
 <template>
-  <main class="flex min-h-screen" style="background: var(--color-bg);">
-    <AppSidebar />
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <AppHeader :breadcrumbs="[{ text: '项目管理', link: '/projects' }, { text: projectName }, { text: '打包中心' }]" />
-      <div class="flex-1 overflow-y-auto p-6" style="background: var(--color-bg);">
+  <div class="p-6" style="background: var(--color-bg);">
 
         <!-- SECTION 1: 当前配置概览 -->
         <section class="mb-6">
@@ -270,9 +266,7 @@
           </div>
         </section>
 
-      </div>
-    </div>
-  </main>
+  </div>
 </template>
 
 <script setup>
@@ -284,8 +278,6 @@ import {
   Terminal, ShieldCheck, Info, Package, Loader, Archive, FileArchive,
   Lock, Unlock, Download, Trash2
 } from 'lucide-vue-next'
-import AppSidebar from '@/components/AppSidebar.vue'
-import AppHeader from '@/components/AppHeader.vue'
 import {
   getProjectConfig, getProject
 } from '@/api/project'

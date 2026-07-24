@@ -2,6 +2,7 @@ package com.company.deploy.controller;
 
 import com.company.deploy.common.PageResult;
 import com.company.deploy.common.Result;
+import com.company.deploy.common.SecurityUtils;
 import com.company.deploy.dto.ProjectConfigDTO;
 import com.company.deploy.dto.ProjectCreateRequest;
 import com.company.deploy.entity.PackageRecord;
@@ -58,7 +59,7 @@ public class ProjectController {
                                          HttpServletRequest httpRequest) {
         Project project = projectService.createProject(request);
         operationLogService.logSuccess("PROJECT", "CREATE", "PROJECT", project.getId(),
-                project.getName(), "创建项目: " + project.getName(), "admin", httpRequest.getRemoteAddr());
+                project.getName(), "创建项目: " + project.getName(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success(project);
     }
 
@@ -68,7 +69,7 @@ public class ProjectController {
                                         HttpServletRequest httpRequest) {
         Project project = projectService.updateProject(id, request);
         operationLogService.logSuccess("PROJECT", "UPDATE", "PROJECT", project.getId(),
-                project.getName(), "更新项目: " + project.getName(), "admin", httpRequest.getRemoteAddr());
+                project.getName(), "更新项目: " + project.getName(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success(project);
     }
 
@@ -80,7 +81,7 @@ public class ProjectController {
         }
         projectService.deleteProject(id);
         operationLogService.logSuccess("PROJECT", "DELETE", "PROJECT", id,
-                project.getName(), "删除项目: " + project.getName(), "admin", httpRequest.getRemoteAddr());
+                project.getName(), "删除项目: " + project.getName(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success();
     }
 
@@ -97,7 +98,7 @@ public class ProjectController {
         ProjectConfigDTO result = projectService.saveProjectConfig(id, config);
         operationLogService.logSuccess("PROJECT", "SAVE_CONFIG", "PROJECT", id,
                 project != null ? project.getName() : String.valueOf(id),
-                "保存项目配置", "admin", httpRequest.getRemoteAddr());
+                "保存项目配置", SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         return Result.success(result);
     }
 
@@ -118,7 +119,7 @@ public class ProjectController {
             return;
         }
         operationLogService.logSuccess("PACKAGE", "DOWNLOAD", "PACKAGE", record.getId(),
-                record.getFileName(), "下载最新包: " + record.getFileName(), "admin", httpRequest.getRemoteAddr());
+                record.getFileName(), "下载最新包: " + record.getFileName(), SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
         String fileName = URLEncoder.encode(record.getFileName(), "UTF-8").replace("+", "%20");
         response.setContentType("application/octet-stream");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");

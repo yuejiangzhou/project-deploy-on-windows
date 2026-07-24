@@ -7,20 +7,14 @@
       </div>
       <nav class="mt-2 px-3 flex flex-col gap-1">
         <router-link
-          to="/projects"
+          v-for="menu in permissionStore.sidebarMenus"
+          :key="menu.path"
+          :to="menu.path"
           class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium no-underline transition-colors"
-          :class="active === 'projects' ? 'sidebar-item-active' : 'sidebar-item'"
+          :class="isActive(menu.path) ? 'sidebar-item-active' : 'sidebar-item'"
         >
-          <FolderOpen style="width: 16px; height: 16px;" />
-          项目管理
-        </router-link>
-        <router-link
-          to="/upload"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium no-underline transition-colors"
-          :class="active === 'upload' ? 'sidebar-item-active' : 'sidebar-item'"
-        >
-          <UploadCloud style="width: 16px; height: 16px;" />
-          资源上传
+          <component :is="getIcon(menu.icon)" style="width: 16px; height: 16px;" />
+          {{ menu.label }}
         </router-link>
       </nav>
     </div>
@@ -34,12 +28,30 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Rocket, FolderOpen, UploadCloud } from 'lucide-vue-next'
+import { usePermissionStore } from '@/stores/permission'
+import { Rocket, FolderOpen, UploadCloud, Key, Users } from 'lucide-vue-next'
 
 const route = useRoute()
-const active = computed(() => route.meta?.sidebarActive)
+const permissionStore = usePermissionStore()
+
+const iconMap = {
+  FolderOpen,
+  UploadCloud,
+  Key,
+  Users
+}
+
+function getIcon(iconName) {
+  return iconMap[iconName] || FolderOpen
+}
+
+function isActive(path) {
+  if (path === '/projects') {
+    return route.path === '/projects' || route.path.startsWith('/projects/')
+  }
+  return route.path === path
+}
 </script>
 
 <style scoped>

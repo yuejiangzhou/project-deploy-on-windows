@@ -1,9 +1,5 @@
 <template>
-  <main class="flex min-h-screen" style="background: var(--color-bg);">
-    <AppSidebar />
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <AppHeader :breadcrumbs="breadcrumbList" />
-      <div class="flex-1 overflow-y-auto p-8" style="background: var(--color-bg);">
+  <div class="p-8" style="background: var(--color-bg);">
 
         <div class="mb-8">
           <h1 class="font-heading text-2xl mb-1" style="color: var(--color-text-primary);">{{ projectName }} - 项目配置</h1>
@@ -475,10 +471,7 @@
           </button>
         </div>
 
-      </div>
-    </div>
-
-    <!-- Nginx.conf Editor Modal -->
+      <!-- Nginx.conf Editor Modal -->
     <div v-show="nginxModalVisible" class="nginx-modal-overlay" @click.self="closeNginxEditor">
       <div class="nginx-modal">
         <div class="nginx-modal-header">
@@ -503,7 +496,7 @@
         </div>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <script setup>
@@ -515,8 +508,6 @@ import {
   Blocks, Coffee, Database, HardDrive, Globe, Cog, Puzzle,
   Box, Info, FileCode, Terminal, X, ChevronDown
 } from 'lucide-vue-next'
-import AppSidebar from '@/components/AppSidebar.vue'
-import AppHeader from '@/components/AppHeader.vue'
 import { getProject, updateProject, getProjectConfig, saveProjectConfig } from '@/api/project'
 import { listFiles } from '@/api/file'
 import { getInfraList } from '@/api/infrastructure'
@@ -750,12 +741,6 @@ const vueGrouped = computed(() => {
   })
   return Object.keys(groups).map(label => ({ label, items: groups[label] }))
 })
-
-const breadcrumbList = computed(() => [
-  { text: '项目管理', link: '/projects' },
-  { text: projectName.value },
-  { text: '项目配置' }
-])
 
 function formatSize(size) { return formatFileSize(size) }
 function formatDT(t) { return formatDateTime(t) }
