@@ -155,9 +155,20 @@
             <div class="rounded-xl border p-5 mt-5" style="border-color: var(--color-border-light); background: var(--color-bg);">
               <h3 class="text-sm font-medium mb-4 flex items-center gap-2" style="color: var(--color-text-primary);">
                 <ShieldCheck style="width: 16px; height: 16px; color: var(--color-primary);" />
-                ZIP加密设置
+                ZIP打包设置
               </h3>
-              <div class="grid grid-cols-2 gap-x-6 gap-y-4">
+
+              <!-- 加密开关 -->
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <span class="text-sm font-medium" style="color: var(--color-text-primary);">启用ZIP加密</span>
+                  <p class="text-xs mt-0.5" style="color: var(--color-text-tertiary);">开启后需要设置密码，客户解压时需输入密码</p>
+                </div>
+                <el-switch v-model="zipEncrypted" active-color="var(--color-primary)" />
+              </div>
+
+              <!-- 密码区域（仅加密时显示） -->
+              <div v-if="zipEncrypted" class="grid grid-cols-2 gap-x-6 gap-y-4">
                 <div>
                   <label class="block text-xs font-medium mb-1.5" style="color: var(--color-text-secondary);">密码</label>
                   <div class="relative">
@@ -181,9 +192,13 @@
                   </div>
                 </div>
               </div>
-              <div class="mt-4 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style="background: var(--color-primary-light); color: var(--color-primary-text);">
+              <div v-if="zipEncrypted" class="mt-4 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style="background: var(--color-primary-light); color: var(--color-primary-text);">
                 <Info style="width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px;" />
-                密码用于ZIP加密
+                密码用于ZIP AES-256加密，请妥善保管并告知客户
+              </div>
+              <div v-else class="mt-4 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style="background: var(--color-bg-sunken); color: var(--color-text-secondary);">
+                <Info style="width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px;" />
+                ZIP将不加密打包，客户可直接解压使用
               </div>
               <div class="mt-5">
                 <button
@@ -400,6 +415,7 @@ const projectConfig = reactive({
   engineFileSize: 0,
   engineVersion: ''
 })
+const zipEncrypted = ref(false)
 const zipPassword = ref('')
 const zipPasswordConfirm = ref('')
 const isPackaging = ref(false)
@@ -492,17 +508,20 @@ function addLog(text, type = 'normal', ok = false) {
 }
 
 async function startPackage() {
-  if (!zipPassword.value.trim()) {
-    ElMessage.warning('请输入加密密码')
-    return
-  }
-  if (zipPassword.value !== zipPasswordConfirm.value) {
-    ElMessage.warning('两次密码输入不一致')
-    return
-  }
-  if (zipPassword.value.length < 6) {
-    ElMessage.warning('加密密码长度不能少于6位')
-    return
+  // 仅当启用加密时才校验密码
+  if (zipEncrypted.value) {
+    if (!zipPassword.value.trim()) {
+      ElMessage.warning('请输入加密密码')
+      return
+    }
+    if (zipPassword.value !== zipPasswordConfirm.value) {
+      ElMessage.warning('两次密码输入不一致')
+      return
+    }
+    if (zipPassword.value.length < 6) {
+      ElMessage.warning('加密密码长度不能少于6位')
+      return
+    }
   }
 
   isPackaging.value = true
@@ -513,7 +532,7 @@ async function startPackage() {
 
   let taskId = null
   try {
-    const payload = { projectId: projectId.value, password: zipPassword.value }
+    const payload = { projectId: projectId.value, encrypted: zipEncrypted.value, password: zipEncrypted.value ? zipPassword.value : '' }
     if (selectedLicenseId.value) {
       payload.licenseId = selectedLicenseId.value
     }

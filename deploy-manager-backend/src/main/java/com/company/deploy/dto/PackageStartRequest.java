@@ -10,8 +10,11 @@ public class PackageStartRequest {
     @NotNull(message = "项目ID不能为空")
     private Long projectId;
 
-    @NotBlank(message = "加密密码不能为空")
+    /** ZIP加密密码，仅当encrypted=true时必填 */
     private String password;
+
+    /** 是否加密ZIP，默认false（不加密） */
+    private Boolean encrypted;
 
     private Long licenseId;
 }

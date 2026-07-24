@@ -76,7 +76,7 @@ public class PackageService {
         log.info("Package concurrency limit initialized: {}", maxConcurrent);
     }
 
-    public String startPackage(Long projectId, String password, Long licenseId) {
+    public String startPackage(Long projectId, String password, Long licenseId, boolean encrypted) {
         Project project = projectMapper.selectById(projectId);
         if (project == null) {
             throw new RuntimeException("\u9879\u76ee\u4e0d\u5b58\u5728");
@@ -84,6 +84,16 @@ public class PackageService {
 
         if (!"READY".equals(project.getStatus())) {
             throw new RuntimeException("\u9879\u76ee\u72b6\u6001\u4e0d\u662f READY\uff0c\u65e0\u6cd5\u6253\u5305");
+        }
+
+        // \u5982\u679c\u542f\u7528\u52a0\u5bc6\uff0c\u5bc6\u7801\u5fc5\u586b\u4e14\u957f\u5ea6\u22656
+        if (encrypted) {
+            if (password == null || password.trim().isEmpty()) {
+                throw new IllegalArgumentException("\u542f\u7528\u52a0\u5bc6\u65f6\u5bc6\u7801\u4e0d\u80fd\u4e3a\u7a7a");
+            }
+            if (password.trim().length() < 6) {
+                throw new IllegalArgumentException("\u52a0\u5bc6\u5bc6\u7801\u957f\u5ea6\u4e0d\u80fd\u5c11\u4e8e6\u4f4d");
+            }
         }
 
         if (activeProjectTasks.containsKey(projectId)) {
@@ -114,13 +124,13 @@ public class PackageService {
         taskLogs.put(taskId, new ArrayList<>());
         addLog(taskId, "\u5f00\u59cb\u6253\u5305 " + project.getName() + "...", "INFO");
 
-        self.executePackageAsync(taskId, projectId, password, licenseId);
+        self.executePackageAsync(taskId, projectId, password, licenseId, encrypted);
 
         return taskId;
     }
 
     @Async("packageTaskExecutor")
-    public void executePackageAsync(String taskId, Long projectId, String password, Long licenseId) {
+    public void executePackageAsync(String taskId, Long projectId, String password, Long licenseId, boolean encrypted) {
         try {
             addLog(taskId, "\u6392\u961f\u7b49\u5f85\u6253\u5305\u8d44\u6e90...", "INFO");
             packageSemaphore.acquire();
@@ -204,10 +214,14 @@ public class PackageService {
                         addLog(taskId, "\u6ce8\u5165License... OK", "INFO");
                     }
 
-                    updateTaskProgress(taskId, 80, "\u6b63\u5728\u6253\u5305\u52a0\u5bc6ZIP...");
-                    addLog(taskId, "\u6b63\u5728\u6253\u5305\u52a0\u5bc6ZIP...", "INFO");
-                    zipPath = createEncryptedZip(project, packageDir, password, taskId);
-                    addLog(taskId, "\u6253\u5305\u52a0\u5bc6ZIP... OK", "INFO");
+                    updateTaskProgress(taskId, 80, encrypted ? "\u6b63\u5728\u6253\u5305\u52a0\u5bc6ZIP..." : "\u6b63\u5728\u6253\u5305ZIP...");
+                    addLog(taskId, encrypted ? "\u6b63\u5728\u6253\u5305\u52a0\u5bc6ZIP..." : "\u6b63\u5728\u6253\u5305ZIP(\u4e0d\u52a0\u5bc6)...", "INFO");
+                    if (encrypted) {
+                        zipPath = createEncryptedZip(project, packageDir, password, taskId);
+                    } else {
+                        zipPath = createPlainZip(project, packageDir, taskId);
+                    }
+                    addLog(taskId, "\u6253\u5305ZIP... OK", "INFO");
 
                     updateTaskProgress(taskId, 90, "\u4e0a\u4f20ZIP\u5230\u5b58\u50a8...");
                     addLog(taskId, "\u4e0a\u4f20ZIP\u5230\u5b58\u50a8...", "INFO");
@@ -217,7 +231,7 @@ public class PackageService {
                     updateTaskStatus(taskId, PackageStatus.SUCCESS, 100, "\u6253\u5305\u5b8c\u6210");
                     addLog(taskId, "\u6253\u5305\u5b8c\u6210!", "INFO");
 
-                    savePackageRecord(taskId, projectId, zipPath, true, PackageStatus.SUCCESS);
+                    savePackageRecord(taskId, projectId, zipPath, encrypted, PackageStatus.SUCCESS);
 
                 } finally {
                     try {
@@ -537,6 +551,33 @@ public class PackageService {
                     params.setEncryptFiles(true);
                     params.setEncryptionMethod(EncryptionMethod.AES);
                     params.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
+                    params.setFileNameInZip(relativePath.toString().replace("\\", "/"));
+                    try {
+                        zipFile.addFile(file.toFile(), params);
+                    } catch (net.lingala.zip4j.exception.ZipException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+
+        return zipPath;
+    }
+
+    /**
+     * Create a plain (non-encrypted) ZIP file from the source directory.
+     */
+    private Path createPlainZip(Project project, Path sourceDir, String taskId) throws Exception {
+        String zipFileName = project.getName() + "-" + taskId + "-release.zip";
+        Path zipPath = Paths.get(tempDir, zipFileName);
+
+        try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
+            Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws java.io.IOException {
+                    Path relativePath = sourceDir.relativize(file);
+                    ZipParameters params = new ZipParameters();
                     params.setFileNameInZip(relativePath.toString().replace("\\", "/"));
                     try {
                         zipFile.addFile(file.toFile(), params);
