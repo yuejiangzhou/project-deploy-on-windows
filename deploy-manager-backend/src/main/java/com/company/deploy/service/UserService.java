@@ -5,7 +5,6 @@ import com.company.deploy.entity.UserEntity;
 import com.company.deploy.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +17,6 @@ import java.util.List;
 public class UserService {
 
     private final UserMapper userMapper;
-    private final PasswordEncoder passwordEncoder;
 
     public UserEntity findByUsername(String username) {
         LambdaQueryWrapper<UserEntity> wrapper = new LambdaQueryWrapper<>();
@@ -37,7 +35,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserEntity createUser(String username, String password, String displayName, String role) {
+    public UserEntity createUser(String username, String encodedPassword, String displayName, String role) {
         UserEntity existing = findByUsername(username);
         if (existing != null) {
             throw new IllegalArgumentException("用户名已存在: " + username);
@@ -45,7 +43,7 @@ public class UserService {
 
         UserEntity user = new UserEntity();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(encodedPassword);
         user.setDisplayName(displayName != null ? displayName : username);
         user.setRole(role != null ? role : "DEVELOPER");
         user.setStatus("ACTIVE");
@@ -77,17 +75,13 @@ public class UserService {
     }
 
     @Transactional
-    public void updatePassword(Long id, String oldPassword, String newPassword) {
+    public void updatePassword(Long id, String newEncodedPassword) {
         UserEntity user = userMapper.selectById(id);
         if (user == null) {
             throw new IllegalArgumentException("用户不存在: " + id);
         }
 
-        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new IllegalArgumentException("原密码不正确");
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(newEncodedPassword);
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
     }

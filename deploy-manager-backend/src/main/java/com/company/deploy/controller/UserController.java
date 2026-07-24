@@ -7,6 +7,7 @@ import com.company.deploy.entity.UserEntity;
 import com.company.deploy.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -30,9 +32,10 @@ public class UserController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Result<UserEntity> createUser(@Valid @RequestBody UserCreateRequest request) {
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
         UserEntity user = userService.createUser(
                 request.getUsername(),
-                request.getPassword(),
+                encodedPassword,
                 request.getDisplayName(),
                 request.getRole());
         // 返回时清除密码字段
@@ -64,7 +67,17 @@ public class UserController {
             return Result.error(400, "新密码长度不能少于6位");
         }
         try {
-            userService.updatePassword(id, oldPassword, newPassword);
+            // 验证旧密码
+            UserEntity user = userService.findById(id);
+            if (user == null) {
+                return Result.error(404, "用户不存在");
+            }
+            if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+                return Result.error(400, "原密码不正确");
+            }
+            // 加密新密码
+            String encodedNewPassword = passwordEncoder.encode(newPassword);
+            userService.updatePassword(id, encodedNewPassword);
             return Result.success();
         } catch (IllegalArgumentException e) {
             return Result.error(400, e.getMessage());
