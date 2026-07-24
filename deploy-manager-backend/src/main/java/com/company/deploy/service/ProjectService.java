@@ -83,6 +83,7 @@ public class ProjectService {
         project.setIncludeMysql(false);
         project.setIncludeMinio(false);
         project.setIncludeNginx(false);
+        project.setIncludeRedis(false);
         project.setJdkVersion("17.0.2");
         project.setMysqlVersion("8.0.35");
         project.setMysqlConfigState("clean");
@@ -90,6 +91,7 @@ public class ProjectService {
         project.setMinioConfigState("clean");
         project.setNginxVersion("1.24");
         project.setEngineVersion("v3.2");
+        project.setRedisPort(6379);
         try {
             projectMapper.insert(project);
         } catch (DuplicateKeyException e) {
@@ -142,11 +144,14 @@ public class ProjectService {
         dto.setIncludeMysql(project.getIncludeMysql());
         dto.setIncludeMinio(project.getIncludeMinio());
         dto.setIncludeNginx(project.getIncludeNginx());
+        dto.setIncludeRedis(project.getIncludeRedis());
         dto.setJdkComponentId(project.getJdkComponentId());
         dto.setMysqlComponentId(project.getMysqlComponentId());
         dto.setMinioComponentId(project.getMinioComponentId());
         dto.setNginxComponentId(project.getNginxComponentId());
         dto.setEngineComponentId(project.getEngineComponentId());
+        dto.setRedisComponentId(project.getRedisComponentId());
+        dto.setRedisPort(project.getRedisPort());
 
         fillFileInfo(dto, project.getJarFileId(), "jar");
         fillFileInfo(dto, project.getVueFolderId(), "vue");
@@ -155,6 +160,7 @@ public class ProjectService {
         fillFileInfo(dto, project.getMinioComponentId(), "minio");
         fillFileInfo(dto, project.getNginxComponentId(), "nginx");
         fillFileInfo(dto, project.getEngineComponentId(), "engine");
+        fillFileInfo(dto, project.getRedisComponentId(), "redis");
 
         return dto;
     }
@@ -204,6 +210,11 @@ public class ProjectService {
                 dto.setEngineFileSize(fileSize);
                 dto.setEngineVersion(version);
                 break;
+            case "redis":
+                dto.setRedisFileName(fileName);
+                dto.setRedisFileSize(fileSize);
+                dto.setRedisVersion(version);
+                break;
         }
     }
 
@@ -235,11 +246,14 @@ public class ProjectService {
         if (config.getIncludeMysql() != null) project.setIncludeMysql(config.getIncludeMysql());
         if (config.getIncludeMinio() != null) project.setIncludeMinio(config.getIncludeMinio());
         if (config.getIncludeNginx() != null) project.setIncludeNginx(config.getIncludeNginx());
+        if (config.getIncludeRedis() != null) project.setIncludeRedis(config.getIncludeRedis());
         if (config.getJdkComponentId() != null) project.setJdkComponentId(config.getJdkComponentId());
         if (config.getMysqlComponentId() != null) project.setMysqlComponentId(config.getMysqlComponentId());
         if (config.getMinioComponentId() != null) project.setMinioComponentId(config.getMinioComponentId());
         if (config.getNginxComponentId() != null) project.setNginxComponentId(config.getNginxComponentId());
         if (config.getEngineComponentId() != null) project.setEngineComponentId(config.getEngineComponentId());
+        if (config.getRedisComponentId() != null) project.setRedisComponentId(config.getRedisComponentId());
+        if (config.getRedisPort() != null) project.setRedisPort(config.getRedisPort());
 
         updateProjectStatus(project);
 

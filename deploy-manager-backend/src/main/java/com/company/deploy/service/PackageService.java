@@ -11,6 +11,7 @@ import com.company.deploy.mapper.PackageRecordMapper;
 import com.company.deploy.mapper.PackageTaskMapper;
 import com.company.deploy.mapper.ProjectMapper;
 import com.company.deploy.mapper.UploadedFileMapper;
+import com.company.deploy.mapper.LicenseRecordMapper;
 import io.minio.*;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,7 @@ public class PackageService {
     private final UploadedFileMapper uploadedFileMapper;
     private final PackageTaskMapper packageTaskMapper;
     private final PackageRecordMapper packageRecordMapper;
+    private final LicenseRecordMapper licenseRecordMapper;
     private final ScriptTemplateService scriptTemplateService;
 
     @Value("${package.temp-dir:./temp/packages}")
@@ -74,35 +76,26 @@ public class PackageService {
         log.info("Package concurrency limit initialized: {}", maxConcurrent);
     }
 
-    /**
-     * 注意：此方法不能加 @Transactional。
-     * 原因：@Async executePackageAsync 在新线程/新事务中执行，若本方法带事务，
-     * task(PENDING) 的插入在方法返回后才提交，异步线程此时 selectById 查不到 task，
-     * 导致 FAILED/SUCCESS 状态无法更新，前端永远停留在"打包中"。
-     * 单条 insert 无需事务包裹，移除 @Transactional 让插入立即提交，异步线程即可见。
-     */
-    public String startPackage(Long projectId, String password) {
+    public String startPackage(Long projectId, String password, Long licenseId) {
         Project project = projectMapper.selectById(projectId);
         if (project == null) {
-            throw new RuntimeException("项目不存在");
+            throw new RuntimeException("\u9879\u76ee\u4e0d\u5b58\u5728");
         }
 
         if (!"READY".equals(project.getStatus())) {
-            throw new RuntimeException("项目状态不是 READY，无法打包");
+            throw new RuntimeException("\u9879\u76ee\u72b6\u6001\u4e0d\u662f READY\uff0c\u65e0\u6cd5\u6253\u5305");
         }
 
-        // 并发控制：同一项目不允许同时有多个打包任务
         if (activeProjectTasks.containsKey(projectId)) {
-            throw new RuntimeException("该项目已有打包任务在进行中，请等待完成后再试");
+            throw new RuntimeException("\u8be5\u9879\u76ee\u5df2\u6709\u6253\u5305\u4efb\u52a1\u5728\u8fdb\u884c\u4e2d\uff0c\u8bf7\u7b49\u5f85\u5b8c\u6210\u540e\u518d\u8bd5");
         }
 
-        // 检查数据库中是否有未完成的任务（防止重启后状态不一致）
         LambdaQueryWrapper<PackageTask> activeCheck = new LambdaQueryWrapper<>();
         activeCheck.eq(PackageTask::getProjectId, projectId)
                 .in(PackageTask::getStatus, PackageStatus.PENDING.getCode(), PackageStatus.RUNNING.getCode());
         Long activeCount = packageTaskMapper.selectCount(activeCheck);
         if (activeCount != null && activeCount > 0) {
-            throw new RuntimeException("该项目已有打包任务在进行中，请等待完成后再试");
+            throw new RuntimeException("\u8be5\u9879\u76ee\u5df2\u6709\u6253\u5305\u4efb\u52a1\u5728\u8fdb\u884c\u4e2d\uff0c\u8bf7\u7b49\u5f85\u5b8c\u6210\u540e\u518d\u8bd5");
         }
 
         String taskId = UUID.randomUUID().toString();
@@ -112,37 +105,37 @@ public class PackageService {
         task.setProjectId(projectId);
         task.setStatus(PackageStatus.PENDING.getCode());
         task.setProgress(0);
-        task.setCurrentStep("等待打包...");
+        task.setCurrentStep("\u7b49\u5f85\u6253\u5305...");
         task.setPassword(password);
         task.setCreatedAt(LocalDateTime.now());
         packageTaskMapper.insert(task);
 
         activeProjectTasks.put(projectId, taskId);
         taskLogs.put(taskId, new ArrayList<>());
-        addLog(taskId, "开始打包 " + project.getName() + "...", "INFO");
+        addLog(taskId, "\u5f00\u59cb\u6253\u5305 " + project.getName() + "...", "INFO");
 
-        self.executePackageAsync(taskId, projectId, password);
+        self.executePackageAsync(taskId, projectId, password, licenseId);
 
         return taskId;
     }
 
     @Async("packageTaskExecutor")
-    public void executePackageAsync(String taskId, Long projectId, String password) {
+    public void executePackageAsync(String taskId, Long projectId, String password, Long licenseId) {
         try {
-            addLog(taskId, "排队等待打包资源...", "INFO");
+            addLog(taskId, "\u6392\u961f\u7b49\u5f85\u6253\u5305\u8d44\u6e90...", "INFO");
             packageSemaphore.acquire();
 
             try {
-                updateTaskStatus(taskId, PackageStatus.RUNNING, 0, "验证配置完整性...");
-                addLog(taskId, "验证配置完整性...", "INFO");
+                updateTaskStatus(taskId, PackageStatus.RUNNING, 0, "\u9a8c\u8bc1\u914d\u7f6e\u5b8c\u6574\u6027...");
+                addLog(taskId, "\u9a8c\u8bc1\u914d\u7f6e\u5b8c\u6574\u6027...", "INFO");
 
                 Project project = projectMapper.selectById(projectId);
                 if (project == null) {
-                    throw new RuntimeException("项目不存在");
+                    throw new RuntimeException("\u9879\u76ee\u4e0d\u5b58\u5728");
                 }
 
                 if (project.getJarFileId() == null) {
-                    throw new RuntimeException("请先配置JAR包");
+                    throw new RuntimeException("\u8bf7\u5148\u914d\u7f6eJAR\u5305");
                 }
 
                 Path packageDir = Paths.get(tempDir, taskId);
@@ -150,64 +143,79 @@ public class PackageService {
                 Path zipPath = null;
 
                 try {
-                    updateTaskProgress(taskId, 5, "收集后端JAR包...");
-                    addLog(taskId, "收集后端JAR包...", "INFO");
+                    updateTaskProgress(taskId, 5, "\u6536\u96c6\u540e\u7aefJAR\u5305...");
+                    addLog(taskId, "\u6536\u96c6\u540e\u7aefJAR\u5305...", "INFO");
                     collectJar(project, packageDir);
-                    addLog(taskId, "收集后端JAR包... OK", "INFO");
+                    addLog(taskId, "\u6536\u96c6\u540e\u7aefJAR\u5305... OK", "INFO");
 
-                    updateTaskProgress(taskId, 15, "收集JDK环境...");
-                    addLog(taskId, "收集JDK环境...", "INFO");
+                    updateTaskProgress(taskId, 15, "\u6536\u96c6JDK\u73af\u5883...");
+                    addLog(taskId, "\u6536\u96c6JDK\u73af\u5883...", "INFO");
                     collectInfraComponentById(project.getJdkComponentId(), packageDir.resolve("jdk"), "JDK");
-                    addLog(taskId, "收集JDK环境... OK", "INFO");
+                    addLog(taskId, "\u6536\u96c6JDK\u73af\u5883... OK", "INFO");
 
-                    updateTaskProgress(taskId, 30, "收集Vue前端 + Nginx...");
-                    addLog(taskId, "收集Vue前端 + Nginx...", "INFO");
+                    updateTaskProgress(taskId, 30, "\u6536\u96c6Vue\u524d\u7aef + Nginx...");
+                    addLog(taskId, "\u6536\u96c6Vue\u524d\u7aef + Nginx...", "INFO");
                     collectVue(project, packageDir);
                     if (Boolean.TRUE.equals(project.getIncludeNginx())) {
                         collectInfraComponentById(project.getNginxComponentId(), packageDir.resolve("nginx"), "Nginx");
                         collectNginxConf(project, packageDir);
                     }
-                    addLog(taskId, "收集Vue前端 + Nginx... OK", "INFO");
+                    addLog(taskId, "\u6536\u96c6Vue\u524d\u7aef + Nginx... OK", "INFO");
 
                     if (Boolean.TRUE.equals(project.getIncludeMysql())) {
-                        updateTaskProgress(taskId, 45, "收集MySQL便携包...");
-                        addLog(taskId, "收集MySQL便携包...", "INFO");
+                        updateTaskProgress(taskId, 45, "\u6536\u96c6MySQL\u4fbf\u643a\u5305...");
+                        addLog(taskId, "\u6536\u96c6MySQL\u4fbf\u643a\u5305...", "INFO");
                         collectInfraComponentById(project.getMysqlComponentId(), packageDir.resolve("mysql"), "MySQL");
-                        addLog(taskId, "收集MySQL便携包... OK", "INFO");
+                        addLog(taskId, "\u6536\u96c6MySQL\u4fbf\u643a\u5305... OK", "INFO");
                     }
 
                     if (Boolean.TRUE.equals(project.getIncludeMinio())) {
-                        updateTaskProgress(taskId, 55, "收集MinIO...");
-                        addLog(taskId, "收集MinIO...", "INFO");
+                        updateTaskProgress(taskId, 55, "\u6536\u96c6MinIO...");
+                        addLog(taskId, "\u6536\u96c6MinIO...", "INFO");
                         collectInfraComponentById(project.getMinioComponentId(), packageDir.resolve("minio"), "MinIO");
-                        addLog(taskId, "收集MinIO... OK", "INFO");
+                        addLog(taskId, "\u6536\u96c6MinIO... OK", "INFO");
+                    }
+
+                    if (Boolean.TRUE.equals(project.getIncludeRedis())) {
+                        updateTaskProgress(taskId, 58, "\u6536\u96c6Redis...");
+                        addLog(taskId, "\u6536\u96c6Redis...", "INFO");
+                        collectInfraComponentById(project.getRedisComponentId(), packageDir.resolve("redis"), "Redis");
+                        addLog(taskId, "\u6536\u96c6Redis... OK", "INFO");
                     }
 
                     if (Boolean.TRUE.equals(project.getEngineEnabled())) {
-                        updateTaskProgress(taskId, 62, "收集引擎...");
-                        addLog(taskId, "收集引擎...", "INFO");
-                        collectInfraComponentById(project.getEngineComponentId(), packageDir.resolve("engine"), "引擎");
-                        addLog(taskId, "收集引擎... OK", "INFO");
+                        updateTaskProgress(taskId, 62, "\u6536\u96c6\u5f15\u64ce...");
+                        addLog(taskId, "\u6536\u96c6\u5f15\u64ce...", "INFO");
+                        collectInfraComponentById(project.getEngineComponentId(), packageDir.resolve("engine"), "\u5f15\u64ce");
+                        addLog(taskId, "\u6536\u96c6\u5f15\u64ce... OK", "INFO");
                     }
 
-                    updateTaskProgress(taskId, 70, "生成启动脚本和应用配置...");
-                    addLog(taskId, "生成启动脚本和应用配置...", "INFO");
+                    updateTaskProgress(taskId, 70, "\u751f\u6210\u542f\u52a8\u811a\u672c\u548c\u5e94\u7528\u914d\u7f6e...");
+                    addLog(taskId, "\u751f\u6210\u542f\u52a8\u811a\u672c\u548c\u5e94\u7528\u914d\u7f6e...", "INFO");
                     scriptTemplateService.generateScripts(project, packageDir);
                     generateAppConfig(project, packageDir);
-                    addLog(taskId, "生成启动脚本和应用配置... OK", "INFO");
+                    addLog(taskId, "\u751f\u6210\u542f\u52a8\u811a\u672c\u548c\u5e94\u7528\u914d\u7f6e... OK", "INFO");
 
-                    updateTaskProgress(taskId, 80, "正在打包加密ZIP...");
-                    addLog(taskId, "正在打包加密ZIP...", "INFO");
+                    // Step 7.5: Inject License (after scripts, before ZIP)
+                    if (licenseId != null) {
+                        updateTaskProgress(taskId, 75, "\u6ce8\u5165License...");
+                        addLog(taskId, "\u6ce8\u5165License...", "INFO");
+                        injectLicense(licenseId, packageDir);
+                        addLog(taskId, "\u6ce8\u5165License... OK", "INFO");
+                    }
+
+                    updateTaskProgress(taskId, 80, "\u6b63\u5728\u6253\u5305\u52a0\u5bc6ZIP...");
+                    addLog(taskId, "\u6b63\u5728\u6253\u5305\u52a0\u5bc6ZIP...", "INFO");
                     zipPath = createEncryptedZip(project, packageDir, password, taskId);
-                    addLog(taskId, "打包加密ZIP... OK", "INFO");
+                    addLog(taskId, "\u6253\u5305\u52a0\u5bc6ZIP... OK", "INFO");
 
-                    updateTaskProgress(taskId, 90, "上传ZIP到存储...");
-                    addLog(taskId, "上传ZIP到存储...", "INFO");
+                    updateTaskProgress(taskId, 90, "\u4e0a\u4f20ZIP\u5230\u5b58\u50a8...");
+                    addLog(taskId, "\u4e0a\u4f20ZIP\u5230\u5b58\u50a8...", "INFO");
                     uploadZipToMinio(taskId, projectId, zipPath);
-                    addLog(taskId, "上传ZIP到存储... OK", "INFO");
+                    addLog(taskId, "\u4e0a\u4f20ZIP\u5230\u5b58\u50a8... OK", "INFO");
 
-                    updateTaskStatus(taskId, PackageStatus.SUCCESS, 100, "打包完成");
-                    addLog(taskId, "打包完成!", "INFO");
+                    updateTaskStatus(taskId, PackageStatus.SUCCESS, 100, "\u6253\u5305\u5b8c\u6210");
+                    addLog(taskId, "\u6253\u5305\u5b8c\u6210!", "INFO");
 
                     savePackageRecord(taskId, projectId, zipPath, true, PackageStatus.SUCCESS);
 
@@ -220,28 +228,25 @@ public class PackageService {
                     if (zipPath != null) {
                         try { Files.deleteIfExists(zipPath); } catch (Exception e) { log.warn("Failed to cleanup zip: {}", zipPath, e); }
                     }
-                    // 不移除 taskLogs，让外层的 finally 或后续查询仍可访问
-                    // 异常时日志会被保留，FAILED 状态也能看到失败前的日志
                 }
 
             } catch (Exception e) {
                 log.error("Package task failed: taskId={}, projectId={}", taskId, projectId, e);
-                updateTaskStatus(taskId, PackageStatus.FAILED, 0, "打包失败: " + e.getMessage());
-                addLog(taskId, "打包失败: " + e.getMessage(), "ERROR");
+                updateTaskStatus(taskId, PackageStatus.FAILED, 0, "\u6253\u5305\u5931\u8d25: " + e.getMessage());
+                addLog(taskId, "\u6253\u5305\u5931\u8d25: " + e.getMessage(), "ERROR");
                 savePackageRecord(taskId, projectId, null, false, PackageStatus.FAILED);
             }
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Package task interrupted: {}", taskId, e);
-            updateTaskStatus(taskId, PackageStatus.FAILED, 0, "打包任务被中断");
-            addLog(taskId, "打包任务被中断", "ERROR");
+            updateTaskStatus(taskId, PackageStatus.FAILED, 0, "\u6253\u5305\u4efb\u52a1\u88ab\u4e2d\u65ad");
+            addLog(taskId, "\u6253\u5305\u4efb\u52a1\u88ab\u4e2d\u65ad", "ERROR");
             savePackageRecord(taskId, projectId, null, false, PackageStatus.FAILED);
         } finally {
             packageSemaphore.release();
             activeProjectTasks.remove(projectId);
             taskLogs.remove(taskId);
-            // Clear password after task completion
             try {
                 PackageTask clearTask = packageTaskMapper.selectById(taskId);
                 if (clearTask != null) {
@@ -254,6 +259,38 @@ public class PackageService {
         }
     }
 
+    /**
+     * Inject license files into the package directory.
+     */
+    private void injectLicense(Long licenseId, Path packageDir) throws Exception {
+        LicenseRecord record = licenseRecordMapper.selectById(licenseId);
+        if (record == null) {
+            throw new RuntimeException("License\u8bb0\u5f55\u4e0d\u5b58\u5728: " + licenseId);
+        }
+
+        Path licenseDir = packageDir.resolve("license");
+        Files.createDirectories(licenseDir);
+        Path licPath = licenseDir.resolve("license.lic");
+        try (InputStream is = minioClient.getObject(GetObjectArgs.builder()
+                .bucket(record.getMinioBucket())
+                .object(record.getMinioLicObjectKey())
+                .build())) {
+            Files.copy(is, licPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+        log.info("License file injected: {}", licPath);
+
+        Path runtimeDir = packageDir.resolve(".runtime");
+        Files.createDirectories(runtimeDir);
+        Path timestampPath = runtimeDir.resolve("timestamp.dat");
+        try (InputStream is = minioClient.getObject(GetObjectArgs.builder()
+                .bucket(record.getMinioBucket())
+                .object(record.getMinioTimestampObjectKey())
+                .build())) {
+            Files.copy(is, timestampPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+        log.info("Timestamp file injected: {}", timestampPath);
+    }
+
     public PackageProgressDTO getProgress(String taskId) {
         PackageTask task = packageTaskMapper.selectById(taskId);
         PackageProgressDTO dto = new PackageProgressDTO();
@@ -261,7 +298,7 @@ public class PackageService {
             dto.setTaskId(taskId);
             dto.setStatus(PackageStatus.FAILED.getCode());
             dto.setProgress(0);
-            dto.setCurrentStep("任务不存在");
+            dto.setCurrentStep("\u4efb\u52a1\u4e0d\u5b58\u5728");
             return dto;
         }
 
@@ -303,7 +340,7 @@ public class PackageService {
     public InputStream downloadPackage(Long id) throws Exception {
         PackageRecord record = packageRecordMapper.selectById(id);
         if (record == null) {
-            throw new RuntimeException("打包记录不存在");
+            throw new RuntimeException("\u6253\u5305\u8bb0\u5f55\u4e0d\u5b58\u5728");
         }
         return minioClient.getObject(GetObjectArgs.builder()
                 .bucket(record.getMinioBucket())
@@ -334,7 +371,7 @@ public class PackageService {
     private void collectJar(Project project, Path packageDir) throws Exception {
         UploadedFile jarFile = uploadedFileMapper.selectById(project.getJarFileId());
         if (jarFile == null) {
-            throw new RuntimeException("JAR包文件不存在");
+            throw new RuntimeException("JAR\u5305\u6587\u4ef6\u4e0d\u5b58\u5728");
         }
         Path appDir = packageDir.resolve("app");
         Files.createDirectories(appDir);
@@ -375,7 +412,7 @@ public class PackageService {
             }
         } catch (Exception e) {
             log.warn("Failed to list Vue folder from MinIO", e);
-            throw new RuntimeException("Vue前端文件夹列举失败: " + e.getMessage(), e);
+            throw new RuntimeException("Vue\u524d\u7aef\u6587\u4ef6\u5939\u5217\u4e3e\u5931\u8d25: " + e.getMessage(), e);
         }
     }
 
@@ -435,11 +472,11 @@ public class PackageService {
 
     private void collectInfraComponentById(Long componentId, Path targetDir, String label) throws Exception {
         if (componentId == null) {
-            throw new RuntimeException(label + "组件未选择，请先在项目配置中选择" + label + "版本");
+            throw new RuntimeException(label + "\u7ec4\u4ef6\u672a\u9009\u62e9\uff0c\u8bf7\u5148\u5728\u9879\u76ee\u914d\u7f6e\u4e2d\u9009\u62e9" + label + "\u7248\u672c");
         }
         UploadedFile component = uploadedFileMapper.selectById(componentId);
         if (component == null) {
-            throw new RuntimeException(label + "组件不存在(ID=" + componentId + ")，请重新选择");
+            throw new RuntimeException(label + "\u7ec4\u4ef6\u4e0d\u5b58\u5728(ID=" + componentId + ")\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9");
         }
 
         Files.createDirectories(targetDir);
@@ -464,7 +501,7 @@ public class PackageService {
                     downloadFromMinio(component.getMinioBucket(), item.objectName(), targetPath);
                 }
             } catch (Exception e) {
-                throw new RuntimeException(label + "组件下载失败: " + e.getMessage(), e);
+                throw new RuntimeException(label + "\u7ec4\u4ef6\u4e0b\u8f7d\u5931\u8d25: " + e.getMessage(), e);
             }
         } else {
             downloadFromMinio(component.getMinioBucket(), component.getMinioObjectKey(),

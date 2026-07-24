@@ -40,6 +40,14 @@ Start-Sleep -Seconds 1
 $step = $step + 1
 </#if>
 
+<#if redisEnabled>
+Write-Host "[${step}/${serviceCount}] 启动 Redis..." -ForegroundColor Yellow
+& (Join-Path $servicesDir "start-redis.ps1")
+if ($LASTEXITCODE -ne 0) { Write-Host "Redis 启动失败!" -ForegroundColor Red; exit 1 }
+Start-Sleep -Seconds 1
+$step = $step + 1
+</#if>
+
 Write-Host "[${step}/${serviceCount}] 启动 JAR应用..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "start-jar.ps1")
 if ($LASTEXITCODE -ne 0) { Write-Host "JAR应用 启动失败!" -ForegroundColor Red; exit 1 }

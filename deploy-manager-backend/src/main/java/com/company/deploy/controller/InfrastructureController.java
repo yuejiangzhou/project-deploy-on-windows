@@ -29,7 +29,7 @@ public class InfrastructureController {
             throw new IllegalArgumentException("type 参数不能为空");
         }
         java.util.Set<String> allowedTypes = new java.util.HashSet<>(
-                java.util.Arrays.asList("jdk", "mysql", "minio", "nginx", "engine"));
+                java.util.Arrays.asList("jdk", "mysql", "minio", "nginx", "engine", "redis"));
         if (!allowedTypes.contains(type)) {
             throw new IllegalArgumentException("不支持的组件类型: " + type);
         }

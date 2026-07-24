@@ -25,6 +25,7 @@ public class ProjectConfigDTO {
     private Boolean includeMysql;
     private Boolean includeMinio;
     private Boolean includeNginx;
+    private Boolean includeRedis;
     private Integer enginePort;
 
     private Long jdkComponentId;
@@ -32,6 +33,7 @@ public class ProjectConfigDTO {
     private Long minioComponentId;
     private Long nginxComponentId;
     private Long engineComponentId;
+    private Long redisComponentId;
 
     private String jarFileName;
     private Long jarFileSize;
@@ -54,4 +56,8 @@ public class ProjectConfigDTO {
     private String engineFileName;
     private Long engineFileSize;
     private String engineVersion;
+    private Integer redisPort;
+    private String redisFileName;
+    private Long redisFileSize;
+    private String redisVersion;
 }

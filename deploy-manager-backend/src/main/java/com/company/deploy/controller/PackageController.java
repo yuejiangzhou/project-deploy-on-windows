@@ -34,7 +34,7 @@ public class PackageController {
     public Result<Map<String, String>> startPackage(@Valid @RequestBody PackageStartRequest request,
                                                      HttpServletRequest httpRequest) {
         try {
-            String taskId = packageService.startPackage(request.getProjectId(), request.getPassword());
+            String taskId = packageService.startPackage(request.getProjectId(), request.getPassword(), request.getLicenseId());
             operationLogService.logSuccess("PACKAGE", "START", "PROJECT", request.getProjectId(),
                     null, "启动打包任务: " + taskId, SecurityUtils.getCurrentUsername(), httpRequest.getRemoteAddr());
             return Result.success(Collections.singletonMap("taskId", taskId));

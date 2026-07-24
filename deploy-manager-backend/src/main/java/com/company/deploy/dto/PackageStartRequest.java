@@ -12,4 +12,6 @@ public class PackageStartRequest {
 
     @NotBlank(message = "加密密码不能为空")
     private String password;
+
+    private Long licenseId;
 }

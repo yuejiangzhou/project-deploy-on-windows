@@ -51,6 +51,11 @@ public class ScriptTemplateService {
             generateScript("services/stop-engine.ps1.ftl", model, servicesDir.resolve("stop-engine.ps1"));
         }
 
+        if (Boolean.TRUE.equals(project.getIncludeRedis())) {
+            generateScript("services/start-redis.ps1.ftl", model, servicesDir.resolve("start-redis.ps1"));
+            generateScript("services/stop-redis.ps1.ftl", model, servicesDir.resolve("stop-redis.ps1"));
+        }
+
         log.info("Scripts generated to: {}", outputDir);
     }
 
@@ -90,14 +95,18 @@ public class ScriptTemplateService {
         boolean mysqlEnabled = Boolean.TRUE.equals(project.getIncludeMysql());
         boolean minioEnabled = Boolean.TRUE.equals(project.getIncludeMinio());
         boolean nginxEnabled = Boolean.TRUE.equals(project.getIncludeNginx());
+        boolean redisEnabled = Boolean.TRUE.equals(project.getIncludeRedis());
         model.put("mysqlEnabled", mysqlEnabled);
         model.put("minioEnabled", minioEnabled);
         model.put("nginxEnabled", nginxEnabled);
+        model.put("redisEnabled", redisEnabled);
+        model.put("redisPort", project.getRedisPort() != null ? project.getRedisPort() : 6379);
 
         int serviceCount = 0;
         if (mysqlEnabled) serviceCount++;
         if (minioEnabled) serviceCount++;
         if (nginxEnabled) serviceCount++;
+        if (redisEnabled) serviceCount++;
         if (Boolean.TRUE.equals(project.getEngineEnabled())) {
             serviceCount++;
         }

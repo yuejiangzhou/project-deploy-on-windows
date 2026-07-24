@@ -28,6 +28,11 @@ Write-Host "停止 MinIO..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "stop-minio.ps1")
 </#if>
 
+<#if redisEnabled>
+Write-Host "停止 Redis..." -ForegroundColor Yellow
+& (Join-Path $servicesDir "stop-redis.ps1")
+</#if>
+
 <#if mysqlEnabled>
 Write-Host "停止 MySQL..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "stop-mysql.ps1")

@@ -12,7 +12,8 @@ public enum FileTypeEnum {
     MYSQL("mysql", "MySQL"),
     MINIO("minio", "MinIO"),
     NGINX("nginx", "Nginx"),
-    ENGINE("engine", "引擎");
+    ENGINE("engine", "引擎"),
+    REDIS("redis", "Redis");
 
     private final String code;
     private final String desc;
