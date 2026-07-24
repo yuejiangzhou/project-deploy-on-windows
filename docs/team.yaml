@@ -1,0 +1,44 @@
+# 内部产品打包分发系统 — 项目团队
+
+## 团队信息
+- **团队名称**: pack-distribution-team
+- **项目**: 内部产品打包分发系统 (Internal Product Packaging & Distribution System)
+- **创建时间**: 2025-07-23
+
+## 团队成员
+
+| 角色 | Agent ID | Agent 类型 | Model | 说明 |
+|------|----------|-----------|-------|------|
+| 产品经理 (PM) | pm-agent | product-management-expert | default | PRD、需求管理、流程设计、验收标准 |
+| 技术架构师 | architect-agent | general-purpose | reasoning | 技术方案、架构设计、技术选型评审 |
+| 后端开发 | backend-agent | general-purpose | default | SpringBoot 后端、打包引擎、License 服务 |
+| 前端开发 | frontend-agent | general-purpose | default | Vue 管理界面 |
+| DevOps | devops-agent | general-purpose | default | Windows 打包脚本、便携服务适配、启动脚本 |
+
+## 协作流程
+
+```
+PM (PRD/需求)
+  │
+  ├──→ 技术架构师 (技术方案评审)
+  │      │
+  │      ├──→ 后端开发 (API/打包引擎/License)
+  │      ├──→ 前端开发 (管理界面)
+  │      └──→ DevOps (Windows 打包/脚本)
+  │
+  └──→ 测试验收 (基于 PRD 验收标准)
+```
+
+## 当前阶段：阶段一 — 需求规划 ✅ → 进入阶段二 PRD 撰写
+
+## 会议/沟通记录
+- 2025-07-23：需求规划完成，核心决策已确认
+  - 打包形态：全量便携包（Windows）
+  - 系统形态：Web 管理系统（SpringBoot + Vue）
+  - License：离线 License 文件
+  - 基础服务：Windows 便携版（MySQL/Redis/MinIO/自研引擎）
+  - 版本管理：组件级版本
+  - License 管理：Web 端生成 + 续期，客户手动替换
+  - 文件存储：MinIO
+  - MySQL 安全：禁用 skip-grant-tables
+  - JDK：当前 JDK8，后续多版本支持
