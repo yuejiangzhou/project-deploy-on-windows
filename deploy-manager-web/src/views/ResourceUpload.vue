@@ -348,7 +348,6 @@
           </template>
         </div>
 
-  </div>
 
     <!-- Hidden input for infra upload (archive only) -->
     <input type="file" ref="infraFileRef" style="display: none;"
@@ -453,11 +452,12 @@ const infraTabs = [
   { key: 'mysql', label: 'MySQL' },
   { key: 'minio', label: 'MinIO' },
   { key: 'nginx', label: 'Nginx' },
+  { key: 'redis', label: 'Redis' },
   { key: 'engine', label: 'UnSim引擎' }
 ]
 
 const infraUploadOpen = reactive({
-  jdk: false, mysql: false, minio: false, nginx: false, engine: false
+  jdk: false, mysql: false, minio: false, nginx: false, redis: false, engine: false
 })
 
 const infraUploadForm = reactive({
@@ -473,7 +473,7 @@ const selectedProjectId = ref(null)
 const selectedFileType = ref('jar') // jar or vue
 const fileMap = reactive({}) // { [projectId]: { jar: [], vue: [] } }
 const infraFileMap = reactive({
-  jdk: [], mysql: [], minio: [], nginx: [], engine: []
+  jdk: [], mysql: [], minio: [], nginx: [], redis: [], engine: []
 })
 
 const selectedProjectName = computed(() => {
@@ -667,6 +667,7 @@ function getInfraIcon(key) {
     case 'mysql': return Database
     case 'minio': return HardDrive
     case 'nginx': return Globe
+    case 'redis': return Database
     case 'engine': return Cog
     default: return Package
   }
@@ -678,6 +679,7 @@ function getInfraIconColor(key) {
     case 'mysql': return 'var(--state-warning)'
     case 'minio': return 'var(--state-success)'
     case 'nginx': return 'var(--state-warning)'
+    case 'redis': return 'var(--state-error)'
     case 'engine': return 'var(--color-primary)'
     default: return 'var(--state-info)'
   }
@@ -696,7 +698,7 @@ function getUploadIcon(key) {
 }
 
 function getUploadPrompt(key) {
-  const labels = { jdk: 'JDK', mysql: 'MySQL', minio: 'MinIO', nginx: 'Nginx', engine: 'UnSim引擎' }
+  const labels = { jdk: 'JDK', mysql: 'MySQL', minio: 'MinIO', nginx: 'Nginx', redis: 'Redis', engine: 'UnSim引擎' }
   return `拖拽${labels[key] || ''}压缩包到此处`
 }
 
@@ -710,6 +712,7 @@ function getVersionPlaceholder(key) {
     case 'mysql': return '8.0.35'
     case 'minio': return '2024.06'
     case 'nginx': return '1.24'
+    case 'redis': return '7.2.0'
     case 'engine': return 'v3.2'
     default: return '版本号'
   }
@@ -721,6 +724,7 @@ function getTagPlaceholder(key) {
     case 'mysql': return '如: 含电商初始化数据'
     case 'minio': return '如: 含电商Bucket策略'
     case 'nginx': return '如: 稳定版'
+    case 'redis': return '如: 含配置模板'
     case 'engine': return '电商平台专用引擎'
     default: return '如: 推荐版本'
   }
@@ -732,6 +736,7 @@ function getVersionInputWidth(key) {
     case 'mysql': return '100px'
     case 'minio': return '100px'
     case 'nginx': return '100px'
+    case 'redis': return '100px'
     case 'engine': return '80px'
     default: return '100px'
   }
@@ -743,13 +748,14 @@ function getTagInputWidth(key) {
     case 'mysql': return '140px'
     case 'minio': return '140px'
     case 'nginx': return '100px'
+    case 'redis': return '120px'
     case 'engine': return '140px'
     default: return '100px'
   }
 }
 
 function getUploadTip(key) {
-  const labels = { jdk: 'JDK', mysql: 'MySQL', minio: 'MinIO', nginx: 'Nginx', engine: 'UnSim引擎' }
+  const labels = { jdk: 'JDK', mysql: 'MySQL', minio: 'MinIO', nginx: 'Nginx', redis: 'Redis', engine: 'UnSim引擎' }
   const name = labels[key] || '组件'
   if (key === 'mysql' || key === 'minio') {
     return `${name}：纯净版由系统注入项目配置中的端口和账密 | 含初始化数据：包内预置数据，启动后直接使用`

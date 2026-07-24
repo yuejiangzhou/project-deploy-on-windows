@@ -95,6 +95,62 @@
               </div>
             </div>
 
+            <!-- License Integration -->
+            <div class="rounded-xl border p-5 mt-5" style="border-color: var(--color-border-light); background: var(--color-bg);">
+              <h3 class="text-sm font-medium mb-4 flex items-center gap-2" style="color: var(--color-text-primary);">
+                <Key style="width: 16px; height: 16px; color: var(--color-primary);" />
+                License 集成
+              </h3>
+              <div class="flex items-start gap-4">
+                <div class="flex-1">
+                  <label class="block text-xs font-medium mb-1.5" style="color: var(--color-text-secondary);">选择已有 License</label>
+                  <select v-model="selectedLicenseId"
+                          class="w-full px-3 py-2 rounded-md text-sm outline-none cursor-pointer"
+                          style="background: var(--color-bg-elevated); border: 1px solid var(--color-border); color: var(--color-text-primary);"
+                          @focus="$event.target.style.borderColor='var(--color-primary)'"
+                          @blur="$event.target.style.borderColor='var(--color-border)'">
+                    <option value="">不绑定 License</option>
+                    <option v-for="lic in licenseOptions" :key="lic.id" :value="lic.id">
+                      {{ lic.customerName }} - {{ lic.projectName || '-' }} ({{ lic.type === 'PERMANENT' ? '永久' : lic.trialDays + '天' }})
+                    </option>
+                  </select>
+                </div>
+                <div class="flex items-end">
+                  <button class="text-sm font-medium cursor-pointer border-0 bg-transparent"
+                          style="color: var(--color-primary); padding: 8px 0;"
+                          @click="showQuickLicense = !showQuickLicense">
+                    {{ showQuickLicense ? '收起' : '快速生成 License' }}
+                  </button>
+                </div>
+              </div>
+              <div v-show="showQuickLicense" class="mt-4 p-4 rounded-lg" style="border: 1px solid var(--color-border); background: var(--color-bg-sunken);">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <div class="flex items-center gap-1.5">
+                    <label class="text-xs whitespace-nowrap" style="color: var(--color-text-secondary);">客户名称:</label>
+                    <input type="text" v-model="quickLicenseForm.customerName" placeholder="客户名称"
+                           class="text-xs px-2.5 py-1.5 rounded-md outline-none"
+                           style="width: 140px; border: 1px solid var(--color-border); background: var(--color-bg-elevated); color: var(--color-text-primary);"
+                           @focus="$event.target.style.borderColor='var(--color-primary)'"
+                           @blur="$event.target.style.borderColor='var(--color-border)'">
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <label class="text-xs whitespace-nowrap" style="color: var(--color-text-secondary);">试用天数:</label>
+                    <input type="number" v-model.number="quickLicenseForm.trialDays" min="1"
+                           class="text-xs px-2.5 py-1.5 rounded-md outline-none"
+                           style="width: 80px; border: 1px solid var(--color-border); background: var(--color-bg-elevated); color: var(--color-text-primary);"
+                           @focus="$event.target.style.borderColor='var(--color-primary)'"
+                           @blur="$event.target.style.borderColor='var(--color-border)'">
+                  </div>
+                  <button class="px-3 py-1.5 text-xs font-medium rounded-md cursor-pointer border-0"
+                          style="background: var(--color-primary); color: #FFF;"
+                          :disabled="quickLicenseLoading"
+                          @click="handleQuickGenerate">
+                    {{ quickLicenseLoading ? '生成中...' : '生成' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- ZIP加密设置 -->
             <div class="rounded-xl border p-5 mt-5" style="border-color: var(--color-border-light); background: var(--color-bg);">
               <h3 class="text-sm font-medium mb-4 flex items-center gap-2" style="color: var(--color-text-primary);">
@@ -276,7 +332,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Eye, ArrowLeft, Box, Layout, Cpu, Database, HardDrive, Cog, Globe,
   Terminal, ShieldCheck, Info, Package, Loader, Archive, FileArchive,
-  Lock, Unlock, Download, Trash2
+  Lock, Unlock, Download, Trash2, Key
 } from 'lucide-vue-next'
 import {
   getProjectConfig, getProject
@@ -284,6 +340,9 @@ import {
 import {
   getPackages, startPackage as startPackageApi, getDownloadUrl, deletePackage, getPackageProgress
 } from '@/api/package'
+import {
+  getLicenseList, generateLicense
+} from '@/api/license'
 import { formatFileSize } from '@/utils/format'
 
 const route = useRoute()
@@ -353,6 +412,16 @@ const terminalRef = ref(null)
 
 let progressTimer = null
 let pollFailCount = 0
+
+// License integration
+const selectedLicenseId = ref('')
+const licenseOptions = ref([])
+const showQuickLicense = ref(false)
+const quickLicenseLoading = ref(false)
+const quickLicenseForm = reactive({
+  customerName: '',
+  trialDays: 30
+})
 
 const filteredPackages = computed(() => {
   if (filterStatus.value === 'all') return packageRecords.value
@@ -444,7 +513,11 @@ async function startPackage() {
 
   let taskId = null
   try {
-    const res = await startPackageApi({ projectId: projectId.value, password: zipPassword.value })
+    const payload = { projectId: projectId.value, password: zipPassword.value }
+    if (selectedLicenseId.value) {
+      payload.licenseId = selectedLicenseId.value
+    }
+    const res = await startPackageApi(payload)
     taskId = res?.taskId || res?.data?.taskId || res
     if (!taskId) {
       throw new Error('未获取到打包任务ID')
@@ -538,6 +611,48 @@ async function handleDeletePackage(pkg) {
   }
 }
 
+async function loadLicenses() {
+  try {
+    const res = await getLicenseList({ page: 1, pageSize: 9999 })
+    licenseOptions.value = res?.records || res || []
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function handleQuickGenerate() {
+  if (!quickLicenseForm.customerName.trim()) {
+    ElMessage.warning('请输入客户名称')
+    return
+  }
+  if (!quickLicenseForm.trialDays || quickLicenseForm.trialDays < 1) {
+    ElMessage.warning('试用天数至少为1天')
+    return
+  }
+  quickLicenseLoading.value = true
+  try {
+    const res = await generateLicense({
+      projectId: projectId.value,
+      customerName: quickLicenseForm.customerName,
+      type: 'TRIAL',
+      trialDays: quickLicenseForm.trialDays
+    })
+    const newLicense = res?.data || res
+    if (newLicense?.id) {
+      ElMessage.success('License生成成功')
+      selectedLicenseId.value = newLicense.id
+      showQuickLicense.value = false
+      quickLicenseForm.customerName = ''
+      quickLicenseForm.trialDays = 30
+      loadLicenses()
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    quickLicenseLoading.value = false
+  }
+}
+
 onBeforeUnmount(() => {
   if (progressTimer) {
     clearInterval(progressTimer)
@@ -549,6 +664,7 @@ onMounted(() => {
   loadProject()
   loadConfig()
   loadPackages()
+  loadLicenses()
 })
 </script>
 

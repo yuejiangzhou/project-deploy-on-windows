@@ -425,6 +425,47 @@
                 </span>
               </div>
             </div>
+
+            <!-- Redis -->
+            <div class="opt-row" style="margin-top: 12px;">
+              <input type="checkbox" v-model="form.includeRedis" class="opt-checkbox" />
+              <div class="flex items-center gap-3 flex-1 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <Database style="width: 16px; height: 16px; color: var(--color-text-tertiary);" />
+                  <span class="text-sm font-medium" style="color: var(--color-text-primary);">包含 Redis</span>
+                  <div class="path-dropdown" style="min-width: 240px;" :class="{ 'is-open': redisDropdownOpen }">
+                    <div class="path-dropdown-trigger" @click="toggleRedisDropdown">
+                      <span>{{ redisDisplayLabel }}</span>
+                      <ChevronDown style="width: 14px; height: 14px; color: var(--color-text-tertiary); flex-shrink: 0;" />
+                    </div>
+                    <div class="path-dropdown-panel" v-show="redisDropdownOpen">
+                      <div class="path-group">
+                        <div class="path-group-label">Redis 版本</div>
+                        <div
+                          class="path-item"
+                          :class="{ selected: form.redisComponentId === v.id }"
+                          v-for="v in redisVersions"
+                          :key="v.id"
+                          @click="selectRedis(v)"
+                        >
+                          <Box style="width: 14px; height: 14px;" class="file-icon" />
+                          <div class="flex flex-col" style="gap: 2px;">
+                            <span class="text-xs" style="color: var(--color-text-primary);">{{ v.name }}</span>
+                            <span class="text-xs" style="color: var(--color-text-tertiary);">
+                              {{ v.label }} · 通用 · {{ v.size }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <span class="port-field" style="margin-left: auto;">
+                  端口:
+                  <input type="text" v-model.number="form.redisPort" class="port-input" />
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -586,6 +627,11 @@ const form = reactive({
   includeJdk: false,
   includeNginx: false,
   vueFolderId: null,
+  // Redis
+  includeRedis: false,
+  redisComponentId: null,
+  redisVersion: '',
+  redisPort: 6379,
   // 组件文件ID（指向具体的 UploadedFile 记录）
   jdkComponentId: null,
   mysqlComponentId: null,
@@ -599,6 +645,7 @@ const mysqlVersions = ref([])
 const minioVersions = ref([])
 const nginxVersions = ref([])
 const engineVersions = ref([])
+const redisVersions = ref([])
 
 // 按 belongsTo 分组：通用版本（belongsTo 为空或"通用"）和项目专属（belongsTo 匹配当前项目名）
 const mysqlCommonVersions = computed(() =>
@@ -615,8 +662,8 @@ const minioProjectVersions = computed(() =>
 )
 
 async function loadInfraVersions() {
-  const types = ['jdk', 'mysql', 'minio', 'nginx', 'engine']
-  const targets = [jdkVersions, mysqlVersions, minioVersions, nginxVersions, engineVersions]
+  const types = ['jdk', 'mysql', 'minio', 'nginx', 'engine', 'redis']
+  const targets = [jdkVersions, mysqlVersions, minioVersions, nginxVersions, engineVersions, redisVersions]
   for (let i = 0; i < types.length; i++) {
     try {
       const res = await getInfraList(types[i])
@@ -662,6 +709,7 @@ const mysqlDropdownOpen = ref(false)
 const minioDropdownOpen = ref(false)
 const nginxDropdownOpen = ref(false)
 const engineDropdownOpen = ref(false)
+const redisDropdownOpen = ref(false)
 
 const nginxModalVisible = ref(false)
 const nginxConfDraft = ref('')
@@ -698,6 +746,11 @@ const nginxDisplayLabel = computed(() => {
 const engineDisplayLabel = computed(() => {
   const v = engineVersions.value.find(x => x.id === form.engineComponentId)
   return v ? `${v.name} (${v.size})` : '请选择'
+})
+
+const redisDisplayLabel = computed(() => {
+  const v = redisVersions.value.find(x => x.id === form.redisComponentId)
+  return v ? `${v.name} — ${v.label} (${v.size})` : '请选择'
 })
 
 const jarPathLabel = computed(() => {
@@ -762,6 +815,7 @@ function closeAllDropdowns() {
   minioDropdownOpen.value = false
   nginxDropdownOpen.value = false
   engineDropdownOpen.value = false
+  redisDropdownOpen.value = false
 }
 
 function toggleJarDropdown(e) {
@@ -807,6 +861,13 @@ function toggleEngineDropdown(e) {
   engineDropdownOpen.value = v
 }
 
+function toggleRedisDropdown(e) {
+  e.stopPropagation()
+  const v = !redisDropdownOpen.value
+  closeAllDropdowns()
+  redisDropdownOpen.value = v
+}
+
 function selectJar(f) {
   form.jarFileId = f.id
   jarDropdownOpen.value = false
@@ -846,6 +907,13 @@ function selectEngine(v) {
   form.engineVersion = v.version || v.name
   form.includeEngine = true
   engineDropdownOpen.value = false
+}
+
+function selectRedis(v) {
+  form.redisComponentId = v.id
+  form.redisVersion = v.version || v.name
+  form.includeRedis = true
+  redisDropdownOpen.value = false
 }
 
 function handleDocClick() {
@@ -912,6 +980,7 @@ async function loadConfig() {
       form.minioComponentId = res.minioComponentId || null
       form.nginxComponentId = res.nginxComponentId || null
       form.engineComponentId = res.engineComponentId || null
+      form.redisComponentId = res.redisComponentId || null
       // 版本字符串和状态（用于显示和兼容）
       form.jdkVersion = res.jdkVersion || ''
       form.mysqlVersion = res.mysqlVersion || ''
@@ -920,12 +989,15 @@ async function loadConfig() {
       form.minioConfigState = res.minioConfigState || 'clean'
       form.nginxVersion = res.nginxVersion || ''
       form.engineVersion = res.engineVersion || ''
+      form.redisVersion = res.redisVersion || ''
       // include 标志：有组件ID即为true
       form.includeJdk = !!form.jdkComponentId || res.includeJdk === true
       form.includeMysql = !!form.mysqlComponentId || res.includeMysql === true
       form.includeMinio = !!form.minioComponentId || res.includeMinio === true
       form.includeNginx = !!form.nginxComponentId || res.includeNginx === true
       form.includeEngine = !!form.engineComponentId || res.engineEnabled === true
+      form.includeRedis = res.includeRedis === true
+      form.redisPort = res.redisPort || 6379
     }
   } catch (e) {
     console.error(e)
@@ -980,6 +1052,11 @@ async function handleSave() {
       minioComponentId: form.minioComponentId,
       nginxComponentId: form.nginxComponentId,
       engineComponentId: form.engineComponentId,
+      // Redis
+      includeRedis: form.includeRedis,
+      redisComponentId: form.redisComponentId,
+      redisVersion: form.redisVersion,
+      redisPort: form.redisPort,
       // 版本字符串和状态（兼容字段）
       jdkVersion: form.jdkVersion,
       mysqlVersion: form.mysqlVersion,
