@@ -335,29 +335,15 @@ License 到期后：
 
 #### F19-01 启动脚本生成
 
-> **Ubiquitous**: The system shall generate a `.bat` + `.ps1` hybrid script approach:
-> - `start.bat`: A lightweight batch bootstrap that invokes PowerShell with `-ExecutionPolicy Bypass -File start_services.ps1`, enabling double-click launch
-> - `start_services.ps1`: The actual service orchestration logic (health checks, PID management, process tree cleanup, MySQL initialization, License pre-validation)
-> - `stop.bat` / `stop_services.ps1`: Same pattern for graceful shutdown
+> **Ubiquitous**: The system shall generate Windows batch scripts (`start.bat` and `stop.bat`) using FreeMarker templates, NOT PowerShell (.ps1) — to maximize compatibility with Windows environments.
 >
-> **Ubiquitous**: The `start_services.ps1` script shall:
-> 1. Pre-validate License via `java -jar app.jar --validate-only` before starting any service
-> 2. Start services in order: MySQL → Redis → MinIO → Nginx → Engine → JAR application
-> 3. For each service: start process → wait for port readiness (active polling via `Get-NetTCPConnection`) → write PID to `pids/{serviceName}.pid`
-> 4. On any service failure: stop all started services, force-kill remaining processes by name via `taskkill /F /IM`, exit with error
+> **Ubiquitous**: The `start.bat` script shall start services in the following order: MySQL → Redis → MinIO → Nginx → Engine → JAR application.
 >
-> **Ubiquitous**: The `stop_services.ps1` script shall:
-> 1. Read all `.pid` files from `pids/` directory
-> 2. Kill each process tree via `taskkill /F /T /PID {pid}` (force-kill with child processes)
-> 3. Remove PID files after successful termination
+> **Ubiquitous**: The `stop.bat` script shall stop services in reverse order: JAR → Engine → Nginx → MinIO → Redis → MySQL.
 >
-> **Ubiquitous**: Each service shall use `Test-PortOpen` (polling `Get-NetTCPConnection`) for readiness checking with configurable timeout, NOT fixed `Start-Sleep`.
+> **Ubiquitous**: Each service start/stop shall be managed via PID files in a `pid/` directory.
 >
-> **Optional**: Where MySQL is included in CLEAN state, the start script shall:
-> 1. Generate `my.ini` with absolute paths
-> 2. Run `mysqld --initialize-insecure` to create data directory
-> 3. Start MySQL and set root password via `ALTER USER`
-> 4. Validate password was set correctly
+> **Optional**: Where MySQL is included in CLEAN state, the start script shall perform first-run initialization.
 
 #### F20-01 打包产物
 
@@ -369,50 +355,34 @@ License 到期后：
 
 #### F21-01 License 生成
 
-> **Ubiquitous**: The License system shall use a three-layer protection mechanism:
-> 1. **License file** (`license/license.lic`): JSON `{data, signature}` — `data` contains `{type, expire, issue}`, `signature` is RSA-2048 SHA256withRSA of `data`
-> 2. **Runtime timestamp** (`.runtime/timestamp.dat`): AES-ECB encrypted timestamp to detect system time rollback
-> 3. **Startup validation** (`--validate-only` mode): JAR validates License before SpringApplication.run()
->
 > **Event-driven**: When a SALES user requests License generation with customer name and trial duration (days), the system shall:
 > 1. Accept customer name and trial days as input
-> 2. Compute `expire = today + trialDays`, `issue = today`
-> 3. Sign the data JSON with RSA private key (SHA256withRSA)
-> 4. Generate the `.lic` file
-> 5. Generate the `.runtime/timestamp.dat` file: AES-encrypted current timestamp
-> 6. Store the License record in the database
-> 7. Store both files to MinIO for injection during packaging
-> 8. Return the License record for download
+> 2. Call the existing License generation code (to be provided by development team)
+> 3. Generate an encrypted License file with expiry date
+> 4. Store the License record in the database
+> 5. Return the License file for download
 >
-> **Ubiquitous**: Trial licenses shall have a 30-day hard limit from issue date (enforced by `LicenseValidator.validateOrExit()`).
+> **Ubiquitous**: The system shall store each License record with: customer name, generated date, expiry date, associated project, and generation operator.
 >
-> **Ubiquitous**: The system shall support PERMANENT license type (no expiry, time-rollback detection only).
->
-> **Unwanted**: If License generation fails (key unavailable, signing error), then the system shall return an error and log the failure.
+> **Unwanted**: If the License generation code is not available or fails, then the system shall return an error and log the failure for investigation.
 
 #### F22-01 License 注入打包
 
-> **Event-driven**: When the packaging pipeline reaches the License injection step, the system shall:
-> 1. Download the License `.lic` file from MinIO to `license/license.lic` in the package directory
-> 2. Download the runtime timestamp `.dat` file from MinIO to `.runtime/timestamp.dat` in the JAR working directory
-> 3. Generate `README.txt` with usage instructions and License renewal guide
+> **Event-driven**: When the packaging pipeline reaches the License injection step, the system shall copy the generated License file into the package's `license/` directory.
 >
-> **Ubiquitous**: The License file shall be named `license.lic` and placed in `license/` subdirectory.
+> **Ubiquitous**: The License file shall be named `license.dat` and placed in a `license/` subdirectory at the root of the packaged folder.
 >
-> **Ubiquitous**: The runtime timestamp file shall be named `timestamp.dat` and placed in `.runtime/` subdirectory.
->
-> **Ubiquitous**: The generated `README.txt` shall include instructions on how to replace `license.lic` for renewal.
+> **Ubiquitous**: The generated `README.txt` shall include instructions on how to replace the License file for renewal.
 
 #### F23-01 License 续期
 
 > **Event-driven**: When a SALES user requests License renewal for an existing License record with a new trial duration, the system shall:
-> 1. Compute new `expire = today + newTrialDays`
-> 2. Generate a new RSA-signed `.lic` file with updated expire date
-> 3. Generate a new `.runtime/timestamp.dat` with current timestamp
-> 4. Create a new License record with `parent_id` linking to the original
-> 5. Return the new License file for download
+> 1. Call the License generation code with updated expiry date
+> 2. Generate a new License file
+> 3. Create a new License record linked to the original
+> 4. Return the new License file for download
 >
-> **Ubiquitous**: License renewal shall generate a completely new `license.lic` file — the customer replaces the old file in the `license/` directory and restarts the application.
+> **Ubiquitous**: License renewal shall generate a completely new License file — the customer replaces the old file in the `license/` directory and restarts the application.
 >
 > **State-driven**: While a License has expired, the system shall still allow renewal operations on that record.
 
