@@ -68,5 +68,5 @@ ALTER TABLE `project` DROP COLUMN IF EXISTS `sql_file_id`;
 -- 密码: admin123 (BCrypt加密)
 -- ----------------------------------------
 INSERT INTO `user` (`username`, `password`, `display_name`, `role`)
-VALUES ('admin', '{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '管理员', 'ADMIN')
+VALUES ('admin', '{bcrypt}$2a$10$228/ty3ZX3ZpOA9CXBObfOjyZUN9kSXZEjULMrv4jtnwhMBZfyHPm', '管理员', 'ADMIN')
 ON DUPLICATE KEY UPDATE `username` = `username`;

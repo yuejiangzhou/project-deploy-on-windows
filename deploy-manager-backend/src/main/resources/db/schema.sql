@@ -5,8 +5,8 @@
 -- ============================================
 
 CREATE DATABASE IF NOT EXISTS `deploy_manager`
-  DEFAULT CHARACTER SET utf8
-  DEFAULT COLLATE utf8_general_ci;
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_general_ci;
 
 USE `deploy_manager`;
 
@@ -25,7 +25,7 @@ CREATE TABLE `user` (
   `updated_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
 -- ----------------------------------------
 -- 2. 项目表
@@ -77,7 +77,7 @@ CREATE TABLE `project` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_name` (`name`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='项目表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目表';
 
 -- ----------------------------------------
 -- 3. 上传文件表
@@ -105,7 +105,7 @@ CREATE TABLE `uploaded_file` (
   PRIMARY KEY (`id`),
   KEY `idx_project_type` (`project_id`, `file_type`),
   KEY `idx_folder_path` (`folder_path`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='上传文件表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='上传文件表';
 
 -- ----------------------------------------
 -- 4. 打包产物表
@@ -124,7 +124,7 @@ CREATE TABLE `package_record` (
   `deleted`       TINYINT(1)   NOT NULL DEFAULT 0       COMMENT '逻辑删除: 0否 1是',
   PRIMARY KEY (`id`),
   KEY `idx_project` (`project_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='打包产物表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='打包产物表';
 
 -- ----------------------------------------
 -- 5. 打包任务表（用于进度追踪）
@@ -140,7 +140,7 @@ CREATE TABLE `package_task` (
   `finished_at`   DATETIME     DEFAULT NULL              COMMENT '完成时间',
   PRIMARY KEY (`id`),
   KEY `idx_project` (`project_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='打包任务表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='打包任务表';
 
 -- ----------------------------------------
 -- 6. 操作日志表
@@ -160,7 +160,7 @@ CREATE TABLE `operation_log` (
   PRIMARY KEY (`id`),
   KEY `idx_module` (`module`),
   KEY `idx_created` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='操作日志表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
 
 -- ----------------------------------------
 -- 7. License 记录表
@@ -181,12 +181,12 @@ CREATE TABLE `license_record` (
   PRIMARY KEY (`id`),
   KEY `idx_project` (`project_id`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='License记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='License记录表';
 
 -- ----------------------------------------
 -- 8. 初始化默认管理员用户
 -- 密码: admin123 (BCrypt加密)
 -- ----------------------------------------
 INSERT INTO `user` (`username`, `password`, `display_name`, `role`)
-VALUES ('admin', '{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '管理员', 'ADMIN')
+VALUES ('admin', '{bcrypt}$2a$10$228/ty3ZX3ZpOA9CXBObfOjyZUN9kSXZEjULMrv4jtnwhMBZfyHPm', '管理员', 'ADMIN')
 ON DUPLICATE KEY UPDATE `username` = `username`;
