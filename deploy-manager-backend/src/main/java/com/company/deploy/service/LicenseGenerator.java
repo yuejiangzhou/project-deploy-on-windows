@@ -75,9 +75,9 @@ public class LicenseGenerator {
             @Value("${license.rsa.private-key:#{null}}") String privateKey,
             @Value("${license.rsa.public-key:#{null}}") String publicKey,
             @Value("${license.aes.key:#{null}}") String aesKey) {
-        this.privateKey = (privateKey != null && !privateKey.isBlank()) ? privateKey : DEV_PRIVATE_KEY;
-        this.publicKey = (publicKey != null && !publicKey.isBlank()) ? publicKey : DEV_PUBLIC_KEY;
-        this.aesKey = (aesKey != null && !aesKey.isBlank()) ? aesKey : DEV_AES_KEY;
+        this.privateKey = (privateKey != null && !privateKey.trim().isEmpty()) ? privateKey : DEV_PRIVATE_KEY;
+        this.publicKey = (publicKey != null && !publicKey.trim().isEmpty()) ? publicKey : DEV_PUBLIC_KEY;
+        this.aesKey = (aesKey != null && !aesKey.trim().isEmpty()) ? aesKey : DEV_AES_KEY;
 
         if (this.privateKey.equals(DEV_PRIVATE_KEY)) {
             log.warn("==============================================");

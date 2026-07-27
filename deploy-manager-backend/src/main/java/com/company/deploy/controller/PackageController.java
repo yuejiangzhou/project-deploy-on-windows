@@ -17,9 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.InputStream;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -54,7 +52,7 @@ public class PackageController {
             if (msg != null && msg.contains("不存在")) {
                 return Result.error(404, msg);
             }
-            return Result.error(500, msg);
+            return Result.error(500, msg != null ? msg : "打包失败");
         }
     }
 

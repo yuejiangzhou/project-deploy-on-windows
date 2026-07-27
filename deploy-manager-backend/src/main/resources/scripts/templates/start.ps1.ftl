@@ -17,7 +17,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 $step = 1
 
 <#if mysqlEnabled>
-Write-Host "[${step}/${serviceCount}] 启动 MySQL..." -ForegroundColor Yellow
+Write-Host "[${r'${step}'}/${serviceCount}] 启动 MySQL..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "start-mysql.ps1")
 if ($LASTEXITCODE -ne 0) { Write-Host "MySQL 启动失败!" -ForegroundColor Red; exit 1 }
 Start-Sleep -Seconds 5
@@ -25,7 +25,7 @@ $step = $step + 1
 </#if>
 
 <#if minioEnabled>
-Write-Host "[${step}/${serviceCount}] 启动 MinIO..." -ForegroundColor Yellow
+Write-Host "[${r'${step}'}/${serviceCount}] 启动 MinIO..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "start-minio.ps1")
 if ($LASTEXITCODE -ne 0) { Write-Host "MinIO 启动失败!" -ForegroundColor Red; exit 1 }
 Start-Sleep -Seconds 2
@@ -33,7 +33,7 @@ $step = $step + 1
 </#if>
 
 <#if nginxEnabled>
-Write-Host "[${step}/${serviceCount}] 启动 Nginx..." -ForegroundColor Yellow
+Write-Host "[${r'${step}'}/${serviceCount}] 启动 Nginx..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "start-nginx.ps1")
 if ($LASTEXITCODE -ne 0) { Write-Host "Nginx 启动失败!" -ForegroundColor Red; exit 1 }
 Start-Sleep -Seconds 1
@@ -41,14 +41,14 @@ $step = $step + 1
 </#if>
 
 <#if redisEnabled>
-Write-Host "[${step}/${serviceCount}] 启动 Redis..." -ForegroundColor Yellow
+Write-Host "[${r'${step}'}/${serviceCount}] 启动 Redis..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "start-redis.ps1")
 if ($LASTEXITCODE -ne 0) { Write-Host "Redis 启动失败!" -ForegroundColor Red; exit 1 }
 Start-Sleep -Seconds 1
 $step = $step + 1
 </#if>
 
-Write-Host "[${step}/${serviceCount}] 启动 JAR应用..." -ForegroundColor Yellow
+Write-Host "[${r'${step}'}/${serviceCount}] 启动 JAR应用..." -ForegroundColor Yellow
 & (Join-Path $servicesDir "start-jar.ps1")
 if ($LASTEXITCODE -ne 0) { Write-Host "JAR应用 启动失败!" -ForegroundColor Red; exit 1 }
 $step = $step + 1

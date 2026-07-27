@@ -631,16 +631,22 @@ public class PackageService {
         packageRecordMapper.insert(record);
     }
 
+    private static final int MAX_STEP_LENGTH = 200;
+
     private void updateTaskStatus(String taskId, PackageStatus status, int progress, String currentStep) {
         PackageTask task = packageTaskMapper.selectById(taskId);
         if (task != null) {
             task.setStatus(status.getCode());
             task.setProgress(progress);
-            task.setCurrentStep(currentStep);
+            task.setCurrentStep(truncate(currentStep, MAX_STEP_LENGTH));
             if (status == PackageStatus.SUCCESS || status == PackageStatus.FAILED) {
                 task.setFinishedAt(LocalDateTime.now());
             }
-            packageTaskMapper.updateById(task);
+            try {
+                packageTaskMapper.updateById(task);
+            } catch (Exception e) {
+                log.error("Failed to update task status: taskId={}", taskId, e);
+            }
         }
     }
 
@@ -648,9 +654,18 @@ public class PackageService {
         PackageTask task = packageTaskMapper.selectById(taskId);
         if (task != null) {
             task.setProgress(progress);
-            task.setCurrentStep(currentStep);
-            packageTaskMapper.updateById(task);
+            task.setCurrentStep(truncate(currentStep, MAX_STEP_LENGTH));
+            try {
+                packageTaskMapper.updateById(task);
+            } catch (Exception e) {
+                log.error("Failed to update task progress: taskId={}", taskId, e);
+            }
         }
+    }
+
+    private String truncate(String s, int maxLen) {
+        if (s == null) return null;
+        return s.length() <= maxLen ? s : s.substring(0, maxLen);
     }
 
     private void addLog(String taskId, String message, String level) {

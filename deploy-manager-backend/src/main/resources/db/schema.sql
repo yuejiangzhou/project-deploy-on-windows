@@ -134,7 +134,7 @@ CREATE TABLE `package_task` (
   `project_id`    BIGINT       NOT NULL                COMMENT '所属项目ID',
   `status`        VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING/RUNNING/SUCCESS/FAILED',
   `progress`      INT          NOT NULL DEFAULT 0       COMMENT '进度百分比 0-100',
-  `current_step`  VARCHAR(200) DEFAULT NULL              COMMENT '当前步骤描述',
+  `current_step`  VARCHAR(500) DEFAULT NULL              COMMENT '当前步骤描述',
   `password`      VARCHAR(255) DEFAULT NULL              COMMENT 'ZIP加密密码',
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `finished_at`   DATETIME     DEFAULT NULL              COMMENT '完成时间',
